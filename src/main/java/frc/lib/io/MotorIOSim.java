@@ -1,0 +1,128 @@
+// Copyright (c) 2021-2026 Littleton Robotics
+// http://github.com/Mechanical-Advantage
+//
+// Use of this source code is governed by a BSD
+// license that can be found in the LICENSE file
+// at the root directory of this project.
+
+package frc.lib.io;
+
+import edu.wpi.first.math.MathUtil;
+import edu.wpi.first.math.controller.PIDController;
+import edu.wpi.first.math.system.plant.DCMotor;
+import edu.wpi.first.math.system.plant.LinearSystemId;
+import edu.wpi.first.wpilibj.simulation.DCMotorSim;
+
+public class MotorIOSim implements MotorIO {
+  public static class MotorIOSimConfig {
+    public DCMotor gearbox = DCMotor.getKrakenX60Foc(1);
+    public double gearing = 1.0;
+    public double momentOfInertiaKgMetersSquared = 0.01;
+    public double velocityKp = 0.1;
+    public double velocityKd = 0.0;
+    public double positionKp = 4.0;
+    public double positionKd = 0.0;
+
+    public MotorIOSimConfig withGearbox(DCMotor gearbox) {
+      this.gearbox = gearbox;
+      return this;
+    }
+
+    public MotorIOSimConfig withGearing(double gearing) {
+      this.gearing = gearing;
+      return this;
+    }
+
+    public MotorIOSimConfig withMomentOfInertia(double momentOfInertiaKgMetersSquared) {
+      this.momentOfInertiaKgMetersSquared = momentOfInertiaKgMetersSquared;
+      return this;
+    }
+
+    public MotorIOSimConfig withVelocityGains(double kP, double kD) {
+      velocityKp = kP;
+      velocityKd = kD;
+      return this;
+    }
+
+    public MotorIOSimConfig withPositionGains(double kP, double kD) {
+      positionKp = kP;
+      positionKd = kD;
+      return this;
+    }
+  }
+
+  private final DCMotorSim sim;
+  private final PIDController velocityController;
+  private final PIDController positionController;
+
+  private boolean velocityClosedLoop = false;
+  private boolean positionClosedLoop = false;
+  private double appliedVolts = 0.0;
+
+  public MotorIOSim(MotorIOSimConfig config) {
+    sim =
+        new DCMotorSim(
+            LinearSystemId.createDCMotorSystem(
+                config.gearbox, config.momentOfInertiaKgMetersSquared, config.gearing),
+            config.gearbox);
+    velocityController = new PIDController(config.velocityKp, 0.0, config.velocityKd);
+    positionController = new PIDController(config.positionKp, 0.0, config.positionKd);
+  }
+
+  @Override
+  public void updateInputs(MotorIOInputs inputs) {
+    if (velocityClosedLoop) {
+      appliedVolts = velocityController.calculate(sim.getAngularVelocityRadPerSec());
+    } else {
+      velocityController.reset();
+    }
+
+    if (positionClosedLoop) {
+      appliedVolts = positionController.calculate(sim.getAngularPositionRad());
+    } else {
+      positionController.reset();
+    }
+
+    sim.setInputVoltage(MathUtil.clamp(appliedVolts, -12.0, 12.0));
+    sim.update(0.02);
+
+    inputs.connected = true;
+    inputs.positionRad = sim.getAngularPositionRad();
+    inputs.velocityRadPerSec = sim.getAngularVelocityRadPerSec();
+    inputs.appliedVolts = appliedVolts;
+    inputs.supplyCurrentAmps = Math.abs(sim.getCurrentDrawAmps());
+    inputs.statorCurrentAmps = Math.abs(sim.getCurrentDrawAmps());
+    inputs.tempCelsius = 25.0;
+  }
+
+  @Override
+  public void setVoltage(double volts) {
+    velocityClosedLoop = false;
+    positionClosedLoop = false;
+    appliedVolts = volts;
+  }
+
+  @Override
+  public void setVelocity(double velocityRadPerSec) {
+    velocityClosedLoop = true;
+    positionClosedLoop = false;
+    velocityController.setSetpoint(velocityRadPerSec);
+  }
+
+  @Override
+  public void setPosition(double positionRad) {
+    velocityClosedLoop = false;
+    positionClosedLoop = true;
+    positionController.setSetpoint(positionRad);
+  }
+
+  @Override
+  public void setEncoderPosition(double positionRad) {
+    sim.setState(positionRad, 0.0);
+  }
+
+  @Override
+  public void stop() {
+    setVoltage(0.0);
+  }
+}
