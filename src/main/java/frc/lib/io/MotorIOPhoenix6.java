@@ -163,6 +163,11 @@ public class MotorIOPhoenix6 implements MotorIO {
 
   private final Debouncer connectedDebounce = new Debouncer(0.5, Debouncer.DebounceType.kFalling);
 
+  private ControlMode controlMode = ControlMode.DISABLED;
+  private double voltageSetpoint = 0.0;
+  private double velocitySetpointRadPerSec = 0.0;
+  private double positionSetpointRad = 0.0;
+
   public MotorIOPhoenix6(MotorIOPhoenix6Config config) {
     this.config = config;
     var canBus = createCANBus(config.canBus);
@@ -233,15 +238,27 @@ public class MotorIOPhoenix6 implements MotorIO {
     inputs.supplyCurrentAmps = supplyCurrent.getValueAsDouble();
     inputs.statorCurrentAmps = statorCurrent.getValueAsDouble();
     inputs.tempCelsius = tempCelsius.getValueAsDouble();
+    inputs.controlMode = controlMode;
+    inputs.voltageSetpoint = voltageSetpoint;
+    inputs.velocitySetpointRadPerSec = velocitySetpointRadPerSec;
+    inputs.positionSetpointRad = positionSetpointRad;
   }
 
   @Override
   public void setVoltage(double volts) {
+    controlMode = ControlMode.VOLTAGE;
+    voltageSetpoint = volts;
+    velocitySetpointRadPerSec = 0.0;
+    positionSetpointRad = 0.0;
     talon.setControl(voltageRequest.withOutput(volts));
   }
 
   @Override
   public void setVelocity(double velocityRadPerSec) {
+    controlMode = ControlMode.VELOCITY;
+    voltageSetpoint = 0.0;
+    velocitySetpointRadPerSec = velocityRadPerSec;
+    positionSetpointRad = 0.0;
     double velocityRotPerSec = Units.radiansToRotations(velocityRadPerSec);
     talon.setControl(
         switch (config.closedLoopOutput) {
@@ -252,6 +269,10 @@ public class MotorIOPhoenix6 implements MotorIO {
 
   @Override
   public void setPosition(double positionRad) {
+    controlMode = ControlMode.POSITION;
+    voltageSetpoint = 0.0;
+    velocitySetpointRadPerSec = 0.0;
+    positionSetpointRad = positionRad;
     double positionRotations = Units.radiansToRotations(positionRad);
     if (config.useMotionMagic) {
       talon.setControl(motionMagicVoltageRequest.withPosition(positionRotations));
@@ -275,7 +296,11 @@ public class MotorIOPhoenix6 implements MotorIO {
 
   @Override
   public void stop() {
-    setVoltage(0.0);
+    controlMode = ControlMode.DISABLED;
+    voltageSetpoint = 0.0;
+    velocitySetpointRadPerSec = 0.0;
+    positionSetpointRad = 0.0;
+    talon.setControl(voltageRequest.withOutput(0.0));
   }
 
   private static NeutralModeValue toPhoenixNeutralMode(NeutralMode neutralMode) {

@@ -34,35 +34,35 @@ public class MotorSubsystem extends SubsystemBase {
     disconnectedAlert.set(!inputs.connected);
   }
 
-  protected double getPositionRad() {
+  public double getPositionRad() {
     return inputs.positionRad;
   }
 
-  protected double getVelocityRadPerSec() {
+  public double getVelocityRadPerSec() {
     return inputs.velocityRadPerSec;
   }
 
-  protected double getStatorCurrentAmps() {
+  public double getStatorCurrentAmps() {
     return inputs.statorCurrentAmps;
   }
 
-  protected void setVoltageOut(double volts) {
+  public void setV(double volts) {
     io.setVoltage(volts);
   }
 
-  protected void setVelocityRadPerSec(double velocityRadPerSec) {
+  public void setVelocityRadPerSec(double velocityRadPerSec) {
     io.setVelocity(velocityRadPerSec);
   }
 
-  protected void setPositionRad(double positionRad) {
+  public void setPositionRad(double positionRad) {
     io.setPosition(positionRad);
   }
 
-  protected void setEncoderPositionRad(double positionRad) {
+  public void setEncoderPositionRad(double positionRad) {
     io.setEncoderPosition(positionRad);
   }
 
-  protected void stopMotor() {
+  public void stop() {
     io.stop();
   }
 }

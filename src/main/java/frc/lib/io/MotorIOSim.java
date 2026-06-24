@@ -59,6 +59,11 @@ public class MotorIOSim implements MotorIO {
   private boolean positionClosedLoop = false;
   private double appliedVolts = 0.0;
 
+  private ControlMode controlMode = ControlMode.DISABLED;
+  private double voltageSetpoint = 0.0;
+  private double velocitySetpointRadPerSec = 0.0;
+  private double positionSetpointRad = 0.0;
+
   public MotorIOSim(MotorIOSimConfig config) {
     sim =
         new DCMotorSim(
@@ -93,6 +98,10 @@ public class MotorIOSim implements MotorIO {
     inputs.supplyCurrentAmps = Math.abs(sim.getCurrentDrawAmps());
     inputs.statorCurrentAmps = Math.abs(sim.getCurrentDrawAmps());
     inputs.tempCelsius = 25.0;
+    inputs.controlMode = controlMode;
+    inputs.voltageSetpoint = voltageSetpoint;
+    inputs.velocitySetpointRadPerSec = velocitySetpointRadPerSec;
+    inputs.positionSetpointRad = positionSetpointRad;
   }
 
   @Override
@@ -100,6 +109,10 @@ public class MotorIOSim implements MotorIO {
     velocityClosedLoop = false;
     positionClosedLoop = false;
     appliedVolts = volts;
+    controlMode = ControlMode.VOLTAGE;
+    voltageSetpoint = volts;
+    velocitySetpointRadPerSec = 0.0;
+    positionSetpointRad = 0.0;
   }
 
   @Override
@@ -107,6 +120,10 @@ public class MotorIOSim implements MotorIO {
     velocityClosedLoop = true;
     positionClosedLoop = false;
     velocityController.setSetpoint(velocityRadPerSec);
+    controlMode = ControlMode.VELOCITY;
+    voltageSetpoint = 0.0;
+    velocitySetpointRadPerSec = velocityRadPerSec;
+    positionSetpointRad = 0.0;
   }
 
   @Override
@@ -114,6 +131,10 @@ public class MotorIOSim implements MotorIO {
     velocityClosedLoop = false;
     positionClosedLoop = true;
     positionController.setSetpoint(positionRad);
+    controlMode = ControlMode.POSITION;
+    voltageSetpoint = 0.0;
+    velocitySetpointRadPerSec = 0.0;
+    positionSetpointRad = positionRad;
   }
 
   @Override
@@ -123,6 +144,12 @@ public class MotorIOSim implements MotorIO {
 
   @Override
   public void stop() {
-    setVoltage(0.0);
+    velocityClosedLoop = false;
+    positionClosedLoop = false;
+    appliedVolts = 0.0;
+    controlMode = ControlMode.DISABLED;
+    voltageSetpoint = 0.0;
+    velocitySetpointRadPerSec = 0.0;
+    positionSetpointRad = 0.0;
   }
 }

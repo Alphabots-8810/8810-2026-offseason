@@ -10,6 +10,13 @@ package frc.lib.io;
 import org.littletonrobotics.junction.AutoLog;
 
 public interface MotorIO {
+  public static enum ControlMode {
+    DISABLED,
+    VOLTAGE,
+    VELOCITY,
+    POSITION
+  }
+
   @AutoLog
   public static class MotorIOInputs {
     public boolean connected = false;
@@ -19,6 +26,11 @@ public interface MotorIO {
     public double supplyCurrentAmps = 0.0;
     public double statorCurrentAmps = 0.0;
     public double tempCelsius = 0.0;
+
+    public ControlMode controlMode = ControlMode.DISABLED;
+    public double voltageSetpoint = 0.0;
+    public double velocitySetpointRadPerSec = 0.0;
+    public double positionSetpointRad = 0.0;
   }
 
   /** Updates the set of loggable inputs. */
