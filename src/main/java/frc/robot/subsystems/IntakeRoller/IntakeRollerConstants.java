@@ -5,7 +5,7 @@
 // license that can be found in the LICENSE file
 // at the root directory of this project.
 
-package frc.robot.subsystems.Drum;
+package frc.robot.subsystems.IntakeRoller;
 
 import edu.wpi.first.math.system.plant.DCMotor;
 import frc.lib.io.MotorIOPhoenix6.ClosedLoopOutput;
@@ -13,35 +13,31 @@ import frc.lib.io.MotorIOPhoenix6.MotorIOPhoenix6Config;
 import frc.lib.io.MotorIOPhoenix6.NeutralMode;
 import frc.lib.io.MotorIOSim.MotorIOSimConfig;
 
-public final class DrumConstants {
+public final class IntakeRollerConstants {
   public static final String CAN_BUS = "rio";
 
-  public static final int Drum_LU_ID = 40;
-  public static final int Drum_LD_ID = 41;
-  public static final int Drum_RU_ID = 42;
-  public static final int Drum_RD_ID = 43;
-  
+  public static final int IntakeRoller_L_ID = 20;
+  public static final int IntakeRoller_R_ID = 21;
 
-  public static final double Drum_ROTOR_TO_MECHANISM_RATIO = 1.0;
+  public static final double IntakeRoller_ROTOR_TO_MECHANISM_RATIO = 1.0;
 
-  public static final MotorIOPhoenix6Config Drum_CONFIG =
-      new MotorIOPhoenix6Config(Drum_LU_ID, CAN_BUS)
-          .withRotorToMechanismRatio(Drum_ROTOR_TO_MECHANISM_RATIO)
+
+  public static final MotorIOPhoenix6Config IntakeRoller_CONFIG =
+      new MotorIOPhoenix6Config(IntakeRoller_L_ID, CAN_BUS)
+          .withRotorToMechanismRatio(IntakeRoller_ROTOR_TO_MECHANISM_RATIO)
           .withInverted(false)
           .withNeutralMode(NeutralMode.COAST)
           .withCurrentLimits(30.0, 60.0)
           .withSlot0(0.1, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
           .withClosedLoopOutput(ClosedLoopOutput.TORQUE_CURRENT_FOC)
-          .withFollower(Drum_LD_ID, false)
-          .withFollower(Drum_RU_ID, true)
-          .withFollower(Drum_RD_ID, true);
+          .withFollower(IntakeRoller_R_ID, true);
 
-  public static final MotorIOSimConfig Drum_SIM_CONFIG =
+  public static final MotorIOSimConfig IntakeRoller_SIM_CONFIG =
       new MotorIOSimConfig()
           .withGearbox(DCMotor.getKrakenX60Foc(2))
-          .withGearing(Drum_ROTOR_TO_MECHANISM_RATIO)
+          .withGearing(IntakeRoller_ROTOR_TO_MECHANISM_RATIO)
           .withMomentOfInertia(0.003)
           .withVelocityGains(0.12, 0.0);
 
-  private DrumConstants() {}
+  private IntakeRollerConstants() {}
 }
