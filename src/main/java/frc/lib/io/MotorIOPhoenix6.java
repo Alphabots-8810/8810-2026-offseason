@@ -14,7 +14,9 @@ import com.ctre.phoenix6.CANBus;
 import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.Follower;
+import com.ctre.phoenix6.controls.MotionMagicTorqueCurrentFOC;
 import com.ctre.phoenix6.controls.MotionMagicVoltage;
+import com.ctre.phoenix6.controls.PositionTorqueCurrentFOC;
 import com.ctre.phoenix6.controls.PositionVoltage;
 import com.ctre.phoenix6.controls.VelocityTorqueCurrentFOC;
 import com.ctre.phoenix6.controls.VelocityVoltage;
@@ -152,7 +154,11 @@ public class MotorIOPhoenix6 implements MotorIO {
   private final VelocityTorqueCurrentFOC velocityTorqueCurrentRequest =
       new VelocityTorqueCurrentFOC(0.0);
   private final PositionVoltage positionVoltageRequest = new PositionVoltage(0.0);
+  private final PositionTorqueCurrentFOC positionTorqueCurrentRequest =
+      new PositionTorqueCurrentFOC(0.0);
   private final MotionMagicVoltage motionMagicVoltageRequest = new MotionMagicVoltage(0.0);
+  private final MotionMagicTorqueCurrentFOC motionMagicTorqueCurrentRequest =
+      new MotionMagicTorqueCurrentFOC(0.0);
 
   private final StatusSignal<Angle> position;
   private final StatusSignal<AngularVelocity> velocity;
@@ -275,9 +281,18 @@ public class MotorIOPhoenix6 implements MotorIO {
     positionSetpointRad = positionRad;
     double positionRotations = Units.radiansToRotations(positionRad);
     if (config.useMotionMagic) {
-      talon.setControl(motionMagicVoltageRequest.withPosition(positionRotations));
+      talon.setControl(
+          switch (config.closedLoopOutput) {
+            case VOLTAGE -> motionMagicVoltageRequest.withPosition(positionRotations);
+            case TORQUE_CURRENT_FOC -> motionMagicTorqueCurrentRequest.withPosition(
+                positionRotations);
+          });
     } else {
-      talon.setControl(positionVoltageRequest.withPosition(positionRotations));
+      talon.setControl(
+          switch (config.closedLoopOutput) {
+            case VOLTAGE -> positionVoltageRequest.withPosition(positionRotations);
+            case TORQUE_CURRENT_FOC -> positionTorqueCurrentRequest.withPosition(positionRotations);
+          });
     }
   }
 
@@ -312,7 +327,8 @@ public class MotorIOPhoenix6 implements MotorIO {
 
   private static GravityTypeValue toPhoenixGravityMode(GravityMode gravityMode) {
     return switch (gravityMode) {
-      case NONE, ELEVATOR_STATIC -> GravityTypeValue.Elevator_Static;
+      case NONE -> GravityTypeValue.Elevator_Static;
+      case ELEVATOR_STATIC -> GravityTypeValue.Elevator_Static;
       case ARM_COSINE -> GravityTypeValue.Arm_Cosine;
     };
   }

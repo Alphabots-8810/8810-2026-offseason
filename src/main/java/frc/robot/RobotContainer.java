@@ -20,9 +20,11 @@ import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.commands.DriveCommands;
 import frc.robot.generated.TunerConstants;
+import frc.robot.subsystems.Drum.Drum;
 import frc.robot.subsystems.Feeder.Feeder;
 import frc.robot.subsystems.Hood.Hood;
 import frc.robot.subsystems.Indexer.Indexer;
+import frc.robot.subsystems.IntakeDeploy.IntakeDeploy;
 import frc.robot.subsystems.IntakeRoller.IntakeRoller;
 import frc.robot.subsystems.drive.Drive;
 import frc.robot.subsystems.drive.GyroIO;
@@ -41,6 +43,16 @@ import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
 public class RobotContainer {
   // Subsystems
   private final Drive drive;
+
+  // Touching each singleton here forces its class to initialize at boot, which runs the
+  // constructor and flashes the motor config (gear ratio, PID, etc). Without an eager reference
+  // these only initialize on first button press, so the config is never applied at deploy.
+  private final Drum drum = Drum.mInstance;
+  private final Feeder feeder = Feeder.mInstance;
+  private final Hood hood = Hood.mInstance;
+  private final Indexer indexer = Indexer.mInstance;
+  private final IntakeDeploy intakeDeploy = IntakeDeploy.mInstance;
+  private final IntakeRoller intakeRoller = IntakeRoller.mInstance;
 
   // Controller
   private final CommandXboxController controller = new CommandXboxController(0);
@@ -104,6 +116,7 @@ public class RobotContainer {
                 new ModuleIO() {});
         break;
     }
+    Drive.mInstance = drive;
 
     // Set up auto routines
     autoChooser = new LoggedDashboardChooser<>("Auto Choices", AutoBuilder.buildAutoChooser());
