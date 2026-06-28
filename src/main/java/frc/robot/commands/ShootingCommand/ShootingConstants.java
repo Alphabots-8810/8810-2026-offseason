@@ -7,11 +7,11 @@ import frc.robot.util.LoggedTunableNumber;
 public final class ShootingConstants {
   // Feed speeds applied once we transition into the SHOOT state.
   public static final LoggedTunableNumber IndexerRotpsTunable =
-      new LoggedTunableNumber("Shooting/IndexerRotps", 80);
+      new LoggedTunableNumber("Shooting/IndexerRotps", 95);
   public static final LoggedTunableNumber IntakeRollerRotpsTunable =
       new LoggedTunableNumber("Shooting/IntakeRollerRotps", 40);
   public static final LoggedTunableNumber FeederRotpsTunable =
-      new LoggedTunableNumber("Shooting/FeederRotps", 80);
+      new LoggedTunableNumber("Shooting/FeederRotps", 95);
 
   // Readiness tolerances used to decide when AIM is satisfied and we may shoot.
   public static final double SHOOTER_VELOCITY_TOLERANCE_ROTPS = 1.0;

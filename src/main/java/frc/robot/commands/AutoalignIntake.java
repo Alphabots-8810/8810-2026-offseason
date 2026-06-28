@@ -1,51 +1,121 @@
 package frc.robot.commands;
 
+import edu.wpi.first.math.MathUtil;
+import edu.wpi.first.math.controller.ProfiledPIDController;
+import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Transform2d;
+import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
+import edu.wpi.first.math.trajectory.TrapezoidProfile;
+import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.subsystems.IntakeRoller.IntakeRoller;
 import frc.robot.subsystems.drive.Drive;
 import java.util.function.DoubleSupplier;
 
+/**
+ * Drives field-relative from the joysticks while running the intake and using a profiled PID
+ * controller to keep the <b>back</b> of the robot pointed along the robot's direction of motion (so
+ * the intake leads into whatever the driver is translating toward). When the sticks are inside the
+ * deadband the last commanded heading is held.
+ */
 public class AutoalignIntake extends Command {
-  private Drive drive;
-  private IntakeRoller roller;
-  private DoubleSupplier xSupplier;
-  private DoubleSupplier ySupplier;
+  private final Drive drive;
+  private final IntakeRoller roller;
+  private final DoubleSupplier xSupplier;
+  private final DoubleSupplier ySupplier;
 
   private static final double DEADBAND = 0.1;
   private static final double ANGLE_KP = 5.0;
   private static final double ANGLE_KD = 0.4;
   private static final double ANGLE_MAX_VELOCITY = 8.0;
   private static final double ANGLE_MAX_ACCELERATION = 20.0;
-  private static final double FF_START_DELAY = 2.0; // Secs
-  private static final double FF_RAMP_RATE = 0.1; // Volts/Sec
-  private static final double WHEEL_RADIUS_MAX_VELOCITY = 0.25; // Rad/Sec
-  private static final double WHEEL_RADIUS_RAMP_RATE = 0.05; // Rad/Sec^2
+  private static final double ROLLER_VELOCITY_ROT_PER_SEC = -20.0;
+
+  private final ProfiledPIDController angleController;
+  private Rotation2d targetHeading = Rotation2d.kZero;
 
   public AutoalignIntake(DoubleSupplier xSupplier, DoubleSupplier ySupplier) {
     this.xSupplier = xSupplier;
     this.ySupplier = ySupplier;
     this.drive = Drive.mInstance;
     this.roller = IntakeRoller.mInstance;
+
+    angleController =
+        new ProfiledPIDController(
+            ANGLE_KP,
+            0.0,
+            ANGLE_KD,
+            new TrapezoidProfile.Constraints(ANGLE_MAX_VELOCITY, ANGLE_MAX_ACCELERATION));
+    angleController.enableContinuousInput(-Math.PI, Math.PI);
+
     addRequirements(drive, roller);
   }
 
   @Override
-  public void initialize() {}
+  public void initialize() {
+    // Hold the current heading until the driver gives a motion direction.
+    targetHeading = drive.getRotation();
+    angleController.reset(drive.getRotation().getRadians());
+  }
 
   @Override
   public void execute() {
-    roller.setVelocityRotPerSec(-20);
+    roller.setVelocityRotPerSec(ROLLER_VELOCITY_ROT_PER_SEC);
+
+    // Linear velocity (unitless, field-relative) from the joysticks.
+    Translation2d linearVelocity =
+        getLinearVelocityFromJoysticks(xSupplier.getAsDouble(), ySupplier.getAsDouble());
+
+    boolean isFlipped =
+        DriverStation.getAlliance().isPresent()
+            && DriverStation.getAlliance().get() == Alliance.Red;
+
+    // Only update the heading goal when the driver is actually translating, otherwise the
+    // direction is undefined (atan2(0, 0)) and we would snap to an arbitrary angle.
+    if (linearVelocity.getNorm() > 1e-6) {
+      // Field-relative direction the robot is moving in.
+      Rotation2d motionDirection = linearVelocity.getAngle();
+      if (isFlipped) {
+        motionDirection = motionDirection.plus(Rotation2d.kPi);
+      }
+      // Align the BACK of the robot with the direction of motion -> rotate 180 deg.
+      targetHeading = motionDirection.plus(Rotation2d.kPi);
+    }
+
+    // Profiled PID on heading produces the angular velocity command.
+    double omega =
+        angleController.calculate(drive.getRotation().getRadians(), targetHeading.getRadians());
+
     ChassisSpeeds speeds =
         new ChassisSpeeds(
-            xSupplier.getAsDouble(),
-            ySupplier.getAsDouble(),
-            Math.atan(ySupplier.getAsDouble() / xSupplier.getAsDouble()));
-    drive.runVelocity(speeds);
+            linearVelocity.getX() * drive.getMaxLinearSpeedMetersPerSec(),
+            linearVelocity.getY() * drive.getMaxLinearSpeedMetersPerSec(),
+            omega);
+
+    drive.runVelocity(
+        ChassisSpeeds.fromFieldRelativeSpeeds(
+            speeds, isFlipped ? drive.getRotation().plus(Rotation2d.kPi) : drive.getRotation()));
   }
 
   @Override
   public void end(boolean interrupted) {
     roller.setV(0);
+    drive.runVelocity(new ChassisSpeeds());
+  }
+
+  private static Translation2d getLinearVelocityFromJoysticks(double x, double y) {
+    // Apply deadband on the magnitude so diagonal motion isn't clipped per-axis.
+    double linearMagnitude = MathUtil.applyDeadband(Math.hypot(x, y), DEADBAND);
+    Rotation2d linearDirection = new Rotation2d(Math.atan2(y, x));
+
+    // Square magnitude for more precise control at low speeds.
+    linearMagnitude = linearMagnitude * linearMagnitude;
+
+    return new Pose2d(Translation2d.kZero, linearDirection)
+        .transformBy(new Transform2d(linearMagnitude, 0.0, Rotation2d.kZero))
+        .getTranslation();
   }
 }

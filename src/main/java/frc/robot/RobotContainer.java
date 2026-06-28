@@ -11,6 +11,8 @@ import com.pathplanner.lib.auto.AutoBuilder;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
+import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.GenericHID;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -179,9 +181,17 @@ public class RobotContainer {
         .b()
         .onTrue(
             Commands.runOnce(
-                    () ->
-                        drive.setPose(
-                            new Pose2d(drive.getPose().getTranslation(), Rotation2d.kZero)),
+                    () -> {
+                      // Zero heading toward the opposing alliance wall. On red the field is
+                      // flipped, so "forward" is 180 deg from the blue origin frame.
+                      boolean isFlipped =
+                          DriverStation.getAlliance().isPresent()
+                              && DriverStation.getAlliance().get() == Alliance.Red;
+                      drive.setPose(
+                          new Pose2d(
+                              drive.getPose().getTranslation(),
+                              isFlipped ? Rotation2d.kPi : Rotation2d.kZero));
+                    },
                     drive)
                 .ignoringDisable(true));
 
@@ -213,8 +223,8 @@ public class RobotContainer {
         .onTrue(new AutoalignIntake(() -> controller.getLeftY(), () -> controller.getLeftX()));
     controller
         .rightTrigger(0.5)
-        .onTrue(new InstantCommand(() -> IntakeRoller.mInstance.setVelocityRotPerSec(-20)));
-    controller.rightBumper().onFalse(new InstantCommand(() -> IntakeRoller.mInstance.setV(0)));
+        .onTrue(new InstantCommand(() -> IntakeRoller.mInstance.setVelocityRotPerSec(20)));
+    controller.rightTrigger().onFalse(new InstantCommand(() -> IntakeRoller.mInstance.setV(0)));
   }
 
   /**
