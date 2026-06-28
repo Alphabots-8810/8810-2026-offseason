@@ -19,15 +19,15 @@ public final class IntakeRollerConstants {
   public static final int IntakeRoller_L_ID = 20;
   public static final int IntakeRoller_R_ID = 21;
 
-  public static final double IntakeRoller_ROTOR_TO_MECHANISM_RATIO = 1.0;
+  public static final double IntakeRoller_ROTOR_TO_MECHANISM_RATIO = 5.4857142857; // 33mm per rot
 
   public static final MotorIOPhoenix6Config IntakeRoller_CONFIG =
       new MotorIOPhoenix6Config(IntakeRoller_L_ID, CAN_BUS)
           .withRotorToMechanismRatio(IntakeRoller_ROTOR_TO_MECHANISM_RATIO)
-          .withInverted(false)
+          .withInverted(true)
           .withNeutralMode(NeutralMode.COAST)
           .withCurrentLimits(30.0, 60.0)
-          .withSlot0(0.1, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+          .withSlot0(10, 0.0, 0.0, 7, 0.0, 0.0, 0.0)
           .withClosedLoopOutput(ClosedLoopOutput.TORQUE_CURRENT_FOC)
           .withFollower(IntakeRoller_R_ID, true);
 

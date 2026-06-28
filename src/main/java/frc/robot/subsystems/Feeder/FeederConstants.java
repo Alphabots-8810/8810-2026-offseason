@@ -27,7 +27,7 @@ public final class FeederConstants {
           .withInverted(false)
           .withNeutralMode(NeutralMode.COAST)
           .withCurrentLimits(30.0, 60.0)
-          .withSlot0(0.1, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+          .withSlot0(10, 0.0, 0.0, 7, 0.0, 0.0, 0.0)
           .withClosedLoopOutput(ClosedLoopOutput.TORQUE_CURRENT_FOC)
           .withFollower(Feeder_R_ID, true);
 

@@ -18,15 +18,16 @@ public final class HoodConstants {
 
   public static final int Hood_ID = 46;
 
-  public static final double Hood_ROTOR_TO_MECHANISM_RATIO = 1.0;
+  public static final double Hood_ROTOR_TO_MECHANISM_RATIO = 56.3636363636363636366363636;
 
   public static final MotorIOPhoenix6Config Hood_CONFIG =
       new MotorIOPhoenix6Config(Hood_ID, CAN_BUS)
           .withRotorToMechanismRatio(Hood_ROTOR_TO_MECHANISM_RATIO)
-          .withInverted(false)
+          .withInverted(true)
           .withNeutralMode(NeutralMode.BRAKE)
           .withCurrentLimits(30.0, 60.0)
-          .withSlot0(0.1, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+          .withSlot0(5., 0.0, 1, 0.0, 0.0, 0.0, 0.0)
+          .withMotionMagic(0.1, 0.4, 0)
           .withClosedLoopOutput(ClosedLoopOutput.TORQUE_CURRENT_FOC);
 
   public static final MotorIOSimConfig Hood_SIM_CONFIG =

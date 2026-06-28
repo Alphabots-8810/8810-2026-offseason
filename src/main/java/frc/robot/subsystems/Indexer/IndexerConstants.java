@@ -24,12 +24,12 @@ public final class IndexerConstants {
   public static final MotorIOPhoenix6Config Indexer_CONFIG =
       new MotorIOPhoenix6Config(Indexer_U_ID, CAN_BUS)
           .withRotorToMechanismRatio(Indexer_ROTOR_TO_MECHANISM_RATIO)
-          .withInverted(false)
+          .withInverted(true)
           .withNeutralMode(NeutralMode.BRAKE)
           .withCurrentLimits(30.0, 60.0)
-          .withSlot0(0.1, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+          .withSlot0(20, 0.0, 0.0, 7, 0.0, 0.0, 0.0)
           .withClosedLoopOutput(ClosedLoopOutput.TORQUE_CURRENT_FOC)
-          .withFollower(Indexer_D_ID, true);
+          .withFollower(Indexer_D_ID, false);
 
   public static final MotorIOSimConfig Indexer_SIM_CONFIG =
       new MotorIOSimConfig()

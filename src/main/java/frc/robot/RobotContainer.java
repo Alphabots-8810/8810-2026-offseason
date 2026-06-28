@@ -20,7 +20,10 @@ import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.commands.DriveCommands;
 import frc.robot.generated.TunerConstants;
-import frc.robot.subsystems.Drum.Drum;
+import frc.robot.subsystems.Feeder.Feeder;
+import frc.robot.subsystems.Hood.Hood;
+import frc.robot.subsystems.Indexer.Indexer;
+import frc.robot.subsystems.IntakeRoller.IntakeRoller;
 import frc.robot.subsystems.drive.Drive;
 import frc.robot.subsystems.drive.GyroIO;
 import frc.robot.subsystems.drive.GyroIOPigeon2;
@@ -162,8 +165,28 @@ public class RobotContainer {
                     drive)
                 .ignoringDisable(true));
 
-    controller.a().onTrue(new InstantCommand(() -> Drum.mInstance.setVelocityRadPerSec(75)));
-    controller.a().onFalse(new InstantCommand(() -> Drum.mInstance.setV(0)));
+    controller
+        .a()
+        .onTrue(new InstantCommand(() -> Hood.mInstance.setPositionRad(30. / 360. * 2 * 3.14)));
+    controller.a().onFalse(new InstantCommand(() -> Hood.mInstance.setPositionRad(0)));
+    controller
+        .y()
+        .onTrue(new InstantCommand(() -> Indexer.mInstance.setVelocityRadPerSec(30 * 2 * 3.14)));
+    controller
+        .x()
+        .onTrue(new InstantCommand(() -> Feeder.mInstance.setVelocityRadPerSec(30 * 2 * 3.14)));
+    controller.x().onFalse(new InstantCommand(() -> Feeder.mInstance.setV(0)));
+    controller.y().onFalse(new InstantCommand(() -> Indexer.mInstance.setV(0)));
+    controller
+        .rightBumper()
+        .onTrue(
+            new InstantCommand(() -> IntakeRoller.mInstance.setVelocityRadPerSec(50 * 2 * 3.14)));
+
+    controller
+        .rightTrigger(0.5)
+        .onTrue(
+            new InstantCommand(() -> IntakeRoller.mInstance.setVelocityRadPerSec(-50 * 2 * 3.14)));
+    controller.rightBumper().onFalse(new InstantCommand(() -> IntakeRoller.mInstance.setV(0)));
   }
 
   /**
