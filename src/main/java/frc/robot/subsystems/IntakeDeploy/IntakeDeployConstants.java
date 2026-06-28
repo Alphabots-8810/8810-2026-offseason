@@ -18,7 +18,8 @@ public final class IntakeDeployConstants {
 
   public static final int IntakeDeploy_ID = 22;
 
-  public static final double IntakeDeploy_ROTOR_TO_MECHANISM_RATIO = 1.0;
+  public static final double IntakeDeploy_ROTOR_TO_MECHANISM_RATIO = 1. / 3.3; // 33mm per rot
+  public static final double IntakeOutPosition = 55.; // 33mm per rot
 
   public static final MotorIOPhoenix6Config IntakeDeploy_CONFIG =
       new MotorIOPhoenix6Config(IntakeDeploy_ID, CAN_BUS)
@@ -26,7 +27,8 @@ public final class IntakeDeployConstants {
           .withInverted(false)
           .withNeutralMode(NeutralMode.BRAKE)
           .withCurrentLimits(30.0, 60.0)
-          .withSlot0(0.1, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+          .withMotionMagic(200, 1000, 0)
+          .withSlot0(20, 0.0, 3, 0.0, 0.0, 0.0, 0.0)
           .withClosedLoopOutput(ClosedLoopOutput.TORQUE_CURRENT_FOC);
 
   public static final MotorIOSimConfig IntakeDeploy_SIM_CONFIG =

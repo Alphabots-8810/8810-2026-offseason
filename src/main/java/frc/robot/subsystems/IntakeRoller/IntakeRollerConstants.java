@@ -19,7 +19,8 @@ public final class IntakeRollerConstants {
   public static final int IntakeRoller_L_ID = 20;
   public static final int IntakeRoller_R_ID = 21;
 
-  public static final double IntakeRoller_ROTOR_TO_MECHANISM_RATIO = 5.4857142857; // 33mm per rot
+  public static final double IntakeRoller_ROTOR_TO_MECHANISM_RATIO = 1; // 33mm per rot
+  // initial position: 0.55737m
 
   public static final MotorIOPhoenix6Config IntakeRoller_CONFIG =
       new MotorIOPhoenix6Config(IntakeRoller_L_ID, CAN_BUS)

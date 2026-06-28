@@ -19,5 +19,18 @@ public class IntakeDeploy extends MotorSubsystem {
         "IntakeDeploy",
         "Disconnected IntakeDeploy motor.",
         true);
+    resetEncoderPositionCentimeter(IntakeDeployConstants.IntakeOutPosition);
+  }
+
+  public void setPositionCentimeter(double Centimeter) {
+    setPositionRad(Centimeter * Math.PI * 2.);
+  }
+
+  public double getPositionCentimeter() {
+    return getPositionRad() / 2. / Math.PI;
+  }
+
+  public void resetEncoderPositionCentimeter(double Centimeter) {
+    setEncoderPositionRad(Centimeter * 2. * Math.PI);
   }
 }
