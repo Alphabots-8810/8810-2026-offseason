@@ -53,4 +53,18 @@ public interface MotorIO {
 
   /** Disables output to the motor. */
   public default void stop() {}
+
+  public default double getPositionRot() {
+    return 0.0;
+  }
+
+  public default double getVelocityRotPerSec() {
+    return 0.0;
+  }
+
+  public default void setVelocityRotPerSec(double velocityRotPerSec) {}
+
+  public default void setPositionRot(double positionRot) {}
+
+  public default void setEncoderPositionRot(double positionRot) {}
 }

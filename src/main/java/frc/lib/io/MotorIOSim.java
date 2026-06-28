@@ -152,4 +152,43 @@ public class MotorIOSim implements MotorIO {
     velocitySetpointRadPerSec = 0.0;
     positionSetpointRad = 0.0;
   }
+
+  @Override
+  public double getPositionRot() {
+    return sim.getAngularPositionRad() / (2.0 * Math.PI);
+  }
+
+  @Override
+  public double getVelocityRotPerSec() {
+    return sim.getAngularVelocityRadPerSec() / (2.0 * Math.PI);
+  }
+
+  @Override
+  public void setVelocityRotPerSec(double velocityRotPerSec) {
+    velocityClosedLoop = true;
+    positionClosedLoop = false;
+    double velocityRadPerSec = velocityRotPerSec * 2.0 * Math.PI;
+    velocityController.setSetpoint(velocityRadPerSec);
+    controlMode = ControlMode.VELOCITY;
+    voltageSetpoint = 0.0;
+    velocitySetpointRadPerSec = velocityRadPerSec;
+    positionSetpointRad = 0.0;
+  }
+
+  @Override
+  public void setPositionRot(double positionRot) {
+    velocityClosedLoop = false;
+    positionClosedLoop = true;
+    double positionRad = positionRot * 2.0 * Math.PI;
+    positionController.setSetpoint(positionRad);
+    controlMode = ControlMode.POSITION;
+    voltageSetpoint = 0.0;
+    velocitySetpointRadPerSec = 0.0;
+    positionSetpointRad = positionRad;
+  }
+
+  @Override
+  public void setEncoderPositionRot(double positionRot) {
+    sim.setState(positionRot * 2.0 * Math.PI, 0.0);
+  }
 }

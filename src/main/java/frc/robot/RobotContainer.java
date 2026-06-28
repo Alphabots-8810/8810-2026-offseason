@@ -20,6 +20,7 @@ import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.commands.DriveCommands;
 import frc.robot.commands.IntakeDeployOutwardZeroCommand;
+import frc.robot.commands.ManualCommand.Manual;
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.Drum.Drum;
 import frc.robot.subsystems.Feeder.Feeder;
@@ -188,7 +189,7 @@ public class RobotContainer {
             new InstantCommand(
                 () -> {
                   IntakeDeploy.mInstance.setPositionCentimeter(55);
-                  IntakeRoller.mInstance.setVelocityRadPerSec(60 * 2 * 3.14);
+                  IntakeRoller.mInstance.setVelocityRotPerSec(60);
                 },
                 IntakeDeploy.mInstance,
                 IntakeRoller.mInstance));
@@ -202,20 +203,14 @@ public class RobotContainer {
                 },
                 IntakeDeploy.mInstance,
                 IntakeRoller.mInstance));
-    controller
-        .y()
-        .onTrue(new InstantCommand(() -> Indexer.mInstance.setVelocityRadPerSec(30 * 2 * 3.14)));
-    controller
-        .x()
-        .onTrue(new InstantCommand(() -> Feeder.mInstance.setVelocityRadPerSec(30 * 2 * 3.14)));
-    controller.x().onFalse(new InstantCommand(() -> Feeder.mInstance.setV(0)));
-    controller.y().onFalse(new InstantCommand(() -> Indexer.mInstance.setV(0)));
+    controller.x().whileTrue(new Manual());
+    controller.y().onTrue(new InstantCommand(() -> Hood.mInstance.setPositionRot(30. / 360.)));
+    controller.y().onFalse(new InstantCommand(() -> Hood.mInstance.setPositionRot(0. / 360.)));
     controller.rightBumper().onTrue(new IntakeDeployOutwardZeroCommand());
 
     controller
         .rightTrigger(0.5)
-        .onTrue(
-            new InstantCommand(() -> IntakeRoller.mInstance.setVelocityRadPerSec(-50 * 2 * 3.14)));
+        .onTrue(new InstantCommand(() -> IntakeRoller.mInstance.setVelocityRotPerSec(-50)));
     controller.rightBumper().onFalse(new InstantCommand(() -> IntakeRoller.mInstance.setV(0)));
   }
 

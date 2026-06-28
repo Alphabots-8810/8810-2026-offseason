@@ -23,14 +23,14 @@ public class IntakeDeploy extends MotorSubsystem {
   }
 
   public void setPositionCentimeter(double Centimeter) {
-    setPositionRad(Centimeter * Math.PI * 2.);
+    setPositionRot(Centimeter);
   }
 
   public double getPositionCentimeter() {
-    return getPositionRad() / 2. / Math.PI;
+    return getPositionRot();
   }
 
   public void resetEncoderPositionCentimeter(double Centimeter) {
-    setEncoderPositionRad(Centimeter * 2. * Math.PI);
+    setEncoderPositionRot(Centimeter);
   }
 }

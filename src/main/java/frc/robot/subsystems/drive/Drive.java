@@ -213,6 +213,10 @@ public class Drive extends SubsystemBase {
 
     // Update vision — runs after odometry so estimates land on a resolved pose.
     updatePoseWithLimelightMegaTag2("limelight");
+
+    Logger.recordOutput(
+        "Odometry/DistanceToHub",
+        getPose().getTranslation().getDistance(new Translation2d(11.9, 4.035)));
   }
 
   /**

@@ -26,8 +26,8 @@ public final class HoodConstants {
           .withInverted(true)
           .withNeutralMode(NeutralMode.BRAKE)
           .withCurrentLimits(30.0, 60.0)
-          .withSlot0(5., 0.0, 1, 0.0, 0.0, 0.0, 0.0)
-          .withMotionMagic(0.1, 0.4, 0)
+          .withSlot0(1000., 0.0, 200, 0.0, 0.0, 0.0, 0.0)
+          .withMotionMagic(2, 8, 0)
           .withClosedLoopOutput(ClosedLoopOutput.TORQUE_CURRENT_FOC);
 
   public static final MotorIOSimConfig Hood_SIM_CONFIG =

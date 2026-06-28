@@ -318,6 +318,55 @@ public class MotorIOPhoenix6 implements MotorIO {
     talon.setControl(voltageRequest.withOutput(0.0));
   }
 
+  @Override
+  public double getPositionRot() {
+    return position.getValueAsDouble();
+  }
+
+  @Override
+  public double getVelocityRotPerSec() {
+    return velocity.getValueAsDouble();
+  }
+
+  @Override
+  public void setVelocityRotPerSec(double velocityRotPerSec) {
+    controlMode = ControlMode.VELOCITY;
+    voltageSetpoint = 0.0;
+    velocitySetpointRadPerSec = Units.rotationsToRadians(velocityRotPerSec);
+    positionSetpointRad = 0.0;
+    talon.setControl(
+        switch (config.closedLoopOutput) {
+          case VOLTAGE -> velocityVoltageRequest.withVelocity(velocityRotPerSec);
+          case TORQUE_CURRENT_FOC -> velocityTorqueCurrentRequest.withVelocity(velocityRotPerSec);
+        });
+  }
+
+  @Override
+  public void setPositionRot(double positionRot) {
+    controlMode = ControlMode.POSITION;
+    voltageSetpoint = 0.0;
+    velocitySetpointRadPerSec = 0.0;
+    positionSetpointRad = Units.rotationsToRadians(positionRot);
+    if (config.useMotionMagic) {
+      talon.setControl(
+          switch (config.closedLoopOutput) {
+            case VOLTAGE -> motionMagicVoltageRequest.withPosition(positionRot);
+            case TORQUE_CURRENT_FOC -> motionMagicTorqueCurrentRequest.withPosition(positionRot);
+          });
+    } else {
+      talon.setControl(
+          switch (config.closedLoopOutput) {
+            case VOLTAGE -> positionVoltageRequest.withPosition(positionRot);
+            case TORQUE_CURRENT_FOC -> positionTorqueCurrentRequest.withPosition(positionRot);
+          });
+    }
+  }
+
+  @Override
+  public void setEncoderPositionRot(double positionRot) {
+    tryUntilOk(5, () -> talon.setPosition(positionRot, 0.25));
+  }
+
   private static NeutralModeValue toPhoenixNeutralMode(NeutralMode neutralMode) {
     return switch (neutralMode) {
       case COAST -> NeutralModeValue.Coast;

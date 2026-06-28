@@ -33,22 +33,22 @@ public class SuperStructure extends SubsystemBase {
   // 4.2/4.3
   public enum State {
     STOW(DriveMode.FOLLOW_JOYSTICKS, 0.0, 0.0, 0.0, HoodMode.DOWN),
-    SHOOTING(DriveMode.AIM_AND_LOCK, INTAKE_8V, FEED_12V, DRUM_SHOOT_RADS, HoodMode.CALCULATED),
+    SHOOTING(DriveMode.AIM_AND_LOCK, INTAKE_8V, FEED_12V, DRUM_SHOOT_ROTPS, HoodMode.CALCULATED),
     INTAKING(DriveMode.FOLLOW_JOYSTICKS, INTAKE_12V, 0.0, 0.0, HoodMode.DOWN),
-    FERRYING(DriveMode.AIM_AND_LOCK, INTAKE_8V, FEED_12V, DRUM_SHOOT_RADS, HoodMode.CALCULATED),
-    OVERRIDE(DriveMode.FOLLOW_JOYSTICKS, INTAKE_8V, FEED_12V, DRUM_SHOOT_RADS, HoodMode.MANUAL);
+    FERRYING(DriveMode.AIM_AND_LOCK, INTAKE_8V, FEED_12V, DRUM_SHOOT_ROTPS, HoodMode.CALCULATED),
+    OVERRIDE(DriveMode.FOLLOW_JOYSTICKS, INTAKE_8V, FEED_12V, DRUM_SHOOT_ROTPS, HoodMode.MANUAL);
 
     public final DriveMode driveMode;
     public final double intakeRollerVolts; // 2.2
     public final double feederVolts; // 3.1
-    public final double drumRadPerSec; // 4.1 — 0 means coast/stop
+    public final double drumRotPerSec; // 4.1 — 0 means coast/stop
     public final HoodMode hoodMode; // 4.2 / 4.3
 
     State(DriveMode dm, double ir, double fv, double drv, HoodMode hm) {
       driveMode = dm;
       intakeRollerVolts = ir;
       feederVolts = fv;
-      drumRadPerSec = drv;
+      drumRotPerSec = drv;
       hoodMode = hm;
     }
   }
@@ -103,17 +103,17 @@ public class SuperStructure extends SubsystemBase {
     feeder.setV(wantedState.feederVolts);
 
     // 4.1 – drum
-    if (wantedState.drumRadPerSec > 0.0) {
-      drum.setVelocityRadPerSec(wantedState.drumRadPerSec);
+    if (wantedState.drumRotPerSec > 0.0) {
+      drum.setVelocityRotPerSec(wantedState.drumRotPerSec);
     } else {
       drum.setV(0.0);
     }
 
     // 4.2 / 4.3 – hood
     switch (wantedState.hoodMode) {
-      case DOWN -> hood.setPositionRad(HOOD_DOWN_POSITION_RAD);
+      case DOWN -> hood.setPositionRot(HOOD_DOWN_POSITION_ROT);
       case CALCULATED -> {} // TODO: calculated setpoint
-      case MANUAL -> hood.setVelocityRadPerSec(manualRpm * (2.0 * Math.PI) / 60.0);
+      case MANUAL -> hood.setVelocityRotPerSec(manualRpm / 60.0);
     }
 
     Logger.recordOutput("SuperStructure/State", wantedState.toString());

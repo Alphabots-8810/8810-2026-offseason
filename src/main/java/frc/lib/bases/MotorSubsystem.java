@@ -30,7 +30,7 @@ public class MotorSubsystem extends SubsystemBase {
     this.io = io;
     this.logKey = logKey;
     disconnectedAlert = new Alert(disconnectedAlertText, AlertType.kError);
-    if (zeroOnInit) io.setEncoderPosition(0.0);
+    if (zeroOnInit) io.setEncoderPositionRot(0.0);
   }
 
   @Override
@@ -40,12 +40,12 @@ public class MotorSubsystem extends SubsystemBase {
     disconnectedAlert.set(!inputs.connected);
   }
 
-  public double getPositionRad() {
-    return inputs.positionRad;
+  public double getPositionRot() {
+    return inputs.positionRad / (2.0 * Math.PI);
   }
 
-  public double getVelocityRadPerSec() {
-    return inputs.velocityRadPerSec;
+  public double getVelocityRotPerSec() {
+    return inputs.velocityRadPerSec / (2.0 * Math.PI);
   }
 
   public double getStatorCurrentAmps() {
@@ -56,16 +56,16 @@ public class MotorSubsystem extends SubsystemBase {
     io.setVoltage(volts);
   }
 
-  public void setVelocityRadPerSec(double velocityRadPerSec) {
-    io.setVelocity(velocityRadPerSec);
+  public void setVelocityRotPerSec(double velocityRotPerSec) {
+    io.setVelocityRotPerSec(velocityRotPerSec);
   }
 
-  public void setPositionRad(double positionRad) {
-    io.setPosition(positionRad);
+  public void setPositionRot(double positionRot) {
+    io.setPositionRot(positionRot);
   }
 
-  public void setEncoderPositionRad(double positionRad) {
-    io.setEncoderPosition(positionRad);
+  public void setEncoderPositionRot(double positionRot) {
+    io.setEncoderPositionRot(positionRot);
   }
 
   public void stop() {
@@ -73,6 +73,6 @@ public class MotorSubsystem extends SubsystemBase {
   }
 
   public void zeroPosition() {
-    io.setEncoderPosition(0.0);
+    io.setEncoderPositionRot(0.0);
   }
 }
