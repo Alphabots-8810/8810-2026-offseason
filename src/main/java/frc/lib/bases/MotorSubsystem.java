@@ -22,9 +22,15 @@ public class MotorSubsystem extends SubsystemBase {
   private final Alert disconnectedAlert;
 
   public MotorSubsystem(MotorIO io, String logKey, String disconnectedAlertText) {
+    this(io, logKey, disconnectedAlertText, false);
+  }
+
+  public MotorSubsystem(
+      MotorIO io, String logKey, String disconnectedAlertText, boolean zeroOnInit) {
     this.io = io;
     this.logKey = logKey;
     disconnectedAlert = new Alert(disconnectedAlertText, AlertType.kError);
+    if (zeroOnInit) io.setEncoderPosition(0.0);
   }
 
   @Override
@@ -64,5 +70,9 @@ public class MotorSubsystem extends SubsystemBase {
 
   public void stop() {
     io.stop();
+  }
+
+  public void zeroPosition() {
+    io.setEncoderPosition(0.0);
   }
 }

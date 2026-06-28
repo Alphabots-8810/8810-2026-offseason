@@ -38,5 +38,3 @@ public final class IntakeDeployConstants {
 
   private IntakeDeployConstants() {}
 }
-
-

@@ -21,7 +21,6 @@ public final class IntakeRollerConstants {
 
   public static final double IntakeRoller_ROTOR_TO_MECHANISM_RATIO = 1.0;
 
-
   public static final MotorIOPhoenix6Config IntakeRoller_CONFIG =
       new MotorIOPhoenix6Config(IntakeRoller_L_ID, CAN_BUS)
           .withRotorToMechanismRatio(IntakeRoller_ROTOR_TO_MECHANISM_RATIO)

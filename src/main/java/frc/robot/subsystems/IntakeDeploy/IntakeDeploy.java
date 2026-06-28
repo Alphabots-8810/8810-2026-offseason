@@ -17,6 +17,7 @@ public class IntakeDeploy extends MotorSubsystem {
           case REPLAY -> new MotorIO() {};
         },
         "IntakeDeploy",
-        "Disconnected IntakeDeploy motor.");
+        "Disconnected IntakeDeploy motor.",
+        true);
   }
 }

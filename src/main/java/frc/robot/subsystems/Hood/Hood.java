@@ -17,6 +17,7 @@ public class Hood extends MotorSubsystem {
           case REPLAY -> new MotorIO() {};
         },
         "Hood",
-        "Disconnected Hood motor.");
+        "Disconnected Hood motor.",
+        true);
   }
 }

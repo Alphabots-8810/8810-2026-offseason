@@ -20,7 +20,6 @@ public final class DrumConstants {
   public static final int Drum_LD_ID = 41;
   public static final int Drum_RU_ID = 42;
   public static final int Drum_RD_ID = 43;
-  
 
   public static final double Drum_ROTOR_TO_MECHANISM_RATIO = 1.0;
 
