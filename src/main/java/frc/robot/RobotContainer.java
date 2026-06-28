@@ -19,6 +19,7 @@ import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.commands.DriveCommands;
+import frc.robot.commands.IntakeDeployOutwardZeroCommand;
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.Drum.Drum;
 import frc.robot.subsystems.Feeder.Feeder;
@@ -180,8 +181,24 @@ public class RobotContainer {
 
     controller
         .a()
-        .onTrue(new InstantCommand(() -> Hood.mInstance.setPositionRad(30. / 360. * 2 * 3.14)));
-    controller.a().onFalse(new InstantCommand(() -> Hood.mInstance.setPositionRad(0)));
+        .onTrue(
+            new InstantCommand(
+                () -> {
+                  IntakeDeploy.mInstance.setPositionCentimeter(55);
+                  IntakeRoller.mInstance.setVelocityRadPerSec(60 * 2 * 3.14);
+                },
+                IntakeDeploy.mInstance,
+                IntakeRoller.mInstance));
+    controller
+        .a()
+        .onFalse(
+            new InstantCommand(
+                () -> {
+                  IntakeDeploy.mInstance.setPositionCentimeter(50);
+                  IntakeRoller.mInstance.setV(0);
+                },
+                IntakeDeploy.mInstance,
+                IntakeRoller.mInstance));
     controller
         .y()
         .onTrue(new InstantCommand(() -> Indexer.mInstance.setVelocityRadPerSec(30 * 2 * 3.14)));
@@ -190,10 +207,7 @@ public class RobotContainer {
         .onTrue(new InstantCommand(() -> Feeder.mInstance.setVelocityRadPerSec(30 * 2 * 3.14)));
     controller.x().onFalse(new InstantCommand(() -> Feeder.mInstance.setV(0)));
     controller.y().onFalse(new InstantCommand(() -> Indexer.mInstance.setV(0)));
-    controller
-        .rightBumper()
-        .onTrue(
-            new InstantCommand(() -> IntakeRoller.mInstance.setVelocityRadPerSec(50 * 2 * 3.14)));
+    controller.rightBumper().onTrue(new IntakeDeployOutwardZeroCommand());
 
     controller
         .rightTrigger(0.5)
