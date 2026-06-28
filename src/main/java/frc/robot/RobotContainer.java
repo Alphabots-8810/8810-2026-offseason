@@ -18,6 +18,7 @@ import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
+import frc.robot.commands.AutoalignIntake;
 import frc.robot.commands.DriveCommands;
 import frc.robot.commands.IntakeDeployOutwardZeroCommand;
 import frc.robot.commands.ManualCommand.Manual;
@@ -207,7 +208,9 @@ public class RobotContainer {
     controller.x().whileTrue(new Manual());
     controller.y().whileTrue(new Shooting());
     controller.rightBumper().onTrue(new IntakeDeployOutwardZeroCommand());
-
+    controller
+        .rightStick()
+        .onTrue(new AutoalignIntake(() -> controller.getLeftY(), () -> controller.getLeftX()));
     controller
         .rightTrigger(0.5)
         .onTrue(new InstantCommand(() -> IntakeRoller.mInstance.setVelocityRotPerSec(-20)));
