@@ -7,6 +7,8 @@
 
 package frc.robot;
 
+import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.interpolation.InterpolatingDoubleTreeMap;
 import edu.wpi.first.wpilibj.RobotBase;
 
@@ -46,5 +48,10 @@ public final class Constants {
 
     /** Replaying from a log file. */
     REPLAY
+  }
+
+  public static final class FieldConstants{
+    public static final Translation2d RED_HUB_LOCATION = new Translation2d(11.917, 4.030);
+    public static final Translation2d BLUE_HUB_LOCATION = new Translation2d(4.623, 4.030);
   }
 }
