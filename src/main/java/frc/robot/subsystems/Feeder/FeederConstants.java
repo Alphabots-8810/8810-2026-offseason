@@ -26,7 +26,7 @@ public final class FeederConstants {
           .withRotorToMechanismRatio(Feeder_ROTOR_TO_MECHANISM_RATIO)
           .withInverted(false)
           .withNeutralMode(NeutralMode.COAST)
-          .withCurrentLimits(30.0, 60.0)
+          .withCurrentLimits(80.0, 100.0)
           .withSlot0(10, 0.0, 0.0, 7, 0.0, 0.0, 0.0)
           .withClosedLoopOutput(ClosedLoopOutput.TORQUE_CURRENT_FOC)
           .withFollower(Feeder_R_ID, true);

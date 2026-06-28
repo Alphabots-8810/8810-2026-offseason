@@ -27,7 +27,7 @@ public class Shooting extends Command {
 
   // Same gains as DriveCommands.joystickDriveAtAngle, used to rotate the chassis toward the HUB.
   private final ProfiledPIDController angleController =
-      new ProfiledPIDController(5.0, 0.0, 0.4, new TrapezoidProfile.Constraints(8.0, 20.0));
+      new ProfiledPIDController(5.0, 0.0, 0.4, new TrapezoidProfile.Constraints(8.0, 30.0));
 
   public Shooting() {
     addRequirements(

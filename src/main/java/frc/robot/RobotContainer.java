@@ -21,6 +21,7 @@ import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.commands.DriveCommands;
 import frc.robot.commands.IntakeDeployOutwardZeroCommand;
 import frc.robot.commands.ManualCommand.Manual;
+import frc.robot.commands.ShootingCommand.Shooting;
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.Drum.Drum;
 import frc.robot.subsystems.Feeder.Feeder;
@@ -189,7 +190,7 @@ public class RobotContainer {
             new InstantCommand(
                 () -> {
                   IntakeDeploy.mInstance.setPositionCentimeter(55);
-                  IntakeRoller.mInstance.setVelocityRotPerSec(60);
+                  IntakeRoller.mInstance.setVelocityRotPerSec(40);
                 },
                 IntakeDeploy.mInstance,
                 IntakeRoller.mInstance));
@@ -198,19 +199,18 @@ public class RobotContainer {
         .onFalse(
             new InstantCommand(
                 () -> {
-                  IntakeDeploy.mInstance.setPositionCentimeter(50);
+                  IntakeDeploy.mInstance.setPositionCentimeter(55);
                   IntakeRoller.mInstance.setV(0);
                 },
                 IntakeDeploy.mInstance,
                 IntakeRoller.mInstance));
     controller.x().whileTrue(new Manual());
-    controller.y().onTrue(new InstantCommand(() -> Hood.mInstance.setPositionRot(30. / 360.)));
-    controller.y().onFalse(new InstantCommand(() -> Hood.mInstance.setPositionRot(0. / 360.)));
+    controller.y().whileTrue(new Shooting());
     controller.rightBumper().onTrue(new IntakeDeployOutwardZeroCommand());
 
     controller
         .rightTrigger(0.5)
-        .onTrue(new InstantCommand(() -> IntakeRoller.mInstance.setVelocityRotPerSec(-50)));
+        .onTrue(new InstantCommand(() -> IntakeRoller.mInstance.setVelocityRotPerSec(-20)));
     controller.rightBumper().onFalse(new InstantCommand(() -> IntakeRoller.mInstance.setV(0)));
   }
 

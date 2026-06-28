@@ -26,7 +26,7 @@ public final class IndexerConstants {
           .withRotorToMechanismRatio(Indexer_ROTOR_TO_MECHANISM_RATIO)
           .withInverted(true)
           .withNeutralMode(NeutralMode.BRAKE)
-          .withCurrentLimits(30.0, 60.0)
+          .withCurrentLimits(80.0, 100.0)
           .withSlot0(20, 0.0, 0.0, 7, 0.0, 0.0, 0.0)
           .withClosedLoopOutput(ClosedLoopOutput.TORQUE_CURRENT_FOC)
           .withFollower(Indexer_D_ID, false);

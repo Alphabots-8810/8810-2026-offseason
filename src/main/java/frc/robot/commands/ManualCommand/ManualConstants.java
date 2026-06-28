@@ -20,7 +20,8 @@ public final class ManualConstants {
    * 3.53 16 53.26
    * 4.15 20.5 56.
    * 4.55 23 58
-   * 5.06 26 60
+   * 5.06 25 61
+   *
    */
   public static final double SHOOTER_VELOCITY_TOLERANCE_ROTPS = 1.0;
   public static final double HOOD_ANGLE_TOLERANCE_ROT = 0.1;
