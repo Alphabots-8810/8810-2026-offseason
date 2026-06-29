@@ -351,16 +351,7 @@ public class MotionCompensateShooting extends Command {
     return linearVelocityMetersPerSec.times(maxSpeed / speed);
   }
 
-  /**
-   * 底盘运动补偿驱动：在支持手柄平移输入的同时，自动旋转车头朝向目标。
-   *
-   * <p>旋转量由 ProfiledPID 输出（目标角 = {@link #targetAngleToHub()}），
-   * 平移量来自手柄，经过死区、平方、限速处理后换算为 m/s。
-   *
-   * <p>红队需将参考旋转角加 π（底盘驱动正方向与蓝队镜像相反）。
-   */
   private void aimDrive() {
-    // PID 计算旋转角速度（rad/s），使车头逐步转向目标
     double omega =
         angleController.calculate(
             Drive.mInstance.getRotation().getRadians(), targetAngleToHub().getRadians());
@@ -370,11 +361,9 @@ public class MotionCompensateShooting extends Command {
     Translation2d limitedLinearVelocity =
         limitLinearVelocity(linearVelocity.times(Drive.mInstance.getMaxLinearSpeedMetersPerSec()));
 
-    // 合并平移与旋转，构成场地坐标系速度指令
     ChassisSpeeds fieldRelativeSpeeds =
         new ChassisSpeeds(limitedLinearVelocity.getX(), limitedLinearVelocity.getY(), omega);
 
-    // 红队：底盘场地正方向反转 180°，需对旋转参考做补偿
     boolean isFlipped =
         DriverStation.getAlliance().isPresent()
             && DriverStation.getAlliance().get() == Alliance.Red;
@@ -386,48 +375,20 @@ public class MotionCompensateShooting extends Command {
                 : Drive.mInstance.getRotation()));
   }
 
-  // =====================================================================
-  //  射手（飞轮 + 炮管）控制
-  // =====================================================================
 
-  /**
-   * 根据当前机器人到 Hub 距离，设定飞轮转速和炮管仰角目标值。
-   * 插值表在 {@link ShootingConstants} 中定义。
-   */
   private void prepareShooter() {
     Drum.mInstance.setVelocityRotPerSec(targetShooterRotps());
     Hood.mInstance.setPositionRot(targetHoodRot());
   }
 
-  /**
-   * 由距离插值表查询飞轮目标转速（rot/s）。
-   * 使用本帧缓存距离 {@code cachedDistanceM}，避免重复计算。
-   */
   private double targetShooterRotps() {
     return ShootingConstants.distanceToShooterRotps.get(cachedDistanceM);
   }
 
-  /**
-   * 由距离插值表查询炮管目标角度，并从角度（度）转换为圈数（rot）。
-   * 使用本帧缓存距离 {@code cachedDistanceM}。
-   */
   private double targetHoodRot() {
     return ShootingConstants.distanceToHoodDeg.get(cachedDistanceM) / 360.0;
   }
 
-  // =====================================================================
-  //  射击就绪判断
-  // =====================================================================
-
-  /**
-   * 判断是否满足射击条件（三项全部就绪才返回 true）：
-   *
-   * <ol>
-   *   <li><b>飞轮就绪</b>：实际转速与目标转速误差 < {@code SHOOTER_VELOCITY_TOLERANCE_ROTPS}；
-   *   <li><b>炮管就绪</b>：实际角度与目标角度误差 < {@code HOOD_ANGLE_TOLERANCE_ROT}；
-   *   <li><b>瞄准就绪</b>：车头方向误差 < {@code AIM_ANGLE_TOLERANCE_RAD}。
-   * </ol>
-   */
   private boolean isReadyToShoot() {
     boolean drumReady =
         Math.abs(Drum.mInstance.getVelocityRotPerSec() - targetShooterRotps())
@@ -440,14 +401,6 @@ public class MotionCompensateShooting extends Command {
     return drumReady && hoodReady && aimReady;
   }
 
-  // =====================================================================
-  //  状态机处理
-  // =====================================================================
-
-  /**
-   * AIM 状态：预热飞轮与炮管，驾驶底盘调整车头方向，供弹机构保持停止。
-   * 三项条件全部满足后切换到 SHOOT 状态。
-   */
   private void aim() {
     prepareShooter();
     aimDrive();
@@ -460,11 +413,6 @@ public class MotionCompensateShooting extends Command {
       state = States.SHOOT;
     }
   }
-
-  /**
-   * SHOOT 状态：维持飞轮转速与炮管角度，继续追踪目标，
-   * 同时驱动全段供弹链条（IntakeRoller → Indexer → Feeder）将球送入飞轮。
-   */
   private void shoot() {
     prepareShooter();
     aimDrive();
@@ -474,11 +422,6 @@ public class MotionCompensateShooting extends Command {
     Feeder.mInstance.setVelocityRotPerSec(ShootingConstants.FeederRotpsTunable.getAsDouble());
   }
 
-  // =====================================================================
-  //  遥测
-  // =====================================================================
-
-  /** 将关键调试数据发布到 AdvantageKit Logger 和 SmartDashboard。 */
   private void log() {
     double flightTime = MotionCompConstants.getFlightTimeSec(cachedDistanceM);
     Logger.recordOutput("Shooting/MotionComp/DistanceM", cachedDistanceM);
@@ -498,38 +441,21 @@ public class MotionCompensateShooting extends Command {
     SmartDashboard.putNumber("MotionCompDistanceM", cachedDistanceM);
   }
 
-  // =====================================================================
-  //  Command 生命周期
-  // =====================================================================
 
   @Override
   public void initialize() {
     state = States.AIM;
-    // 重置 PID 控制器到当前车头角度，避免积分累积造成启动时的瞬态过冲
     angleController.reset(Drive.mInstance.getRotation().getRadians());
   }
 
-  /**
-   * 每帧（约 50Hz）执行：
-   * <ol>
-   *   <li>刷新本帧缓存（距离、look-ahead 姿态、拒绝标志）；
-   *   <li>执行当前状态逻辑（AIM 或 SHOOT）；
-   *   <li>输出遥测数据。
-   * </ol>
-   *
-   * <p>所有缓存在此集中更新，确保同一帧内各方法使用一致的数据，
-   * 并避免对相同值进行重复计算。
-   */
   @Override
   public void execute() {
-    // ── 刷新每帧缓存 ──────────────────────────────────────────────────────
     cachedDistanceM =
         Drive.mInstance.getPose().getTranslation().getDistance(hubLocation());
     double flightTimeSec = MotionCompConstants.getFlightTimeSec(cachedDistanceM);
     cachedLookAheadPose = computeLookAheadPose(flightTimeSec);
     cachedRejectLookAhead = computeRejectLookAhead();
 
-    // ── 状态机 ────────────────────────────────────────────────────────────
     switch (state) {
       case AIM -> aim();
       case SHOOT -> shoot();
@@ -540,15 +466,9 @@ public class MotionCompensateShooting extends Command {
 
   @Override
   public boolean isFinished() {
-    // 持续运行，直到按键松开触发 Command 结束
     return false;
   }
 
-  /**
-   * 指令结束时（按键松开或被中断）停止所有子系统，防止机构持续运转造成损坏。
-   *
-   * @param interrupted 是否被其他指令中断
-   */
   @Override
   public void end(boolean interrupted) {
     Drum.mInstance.stop();
