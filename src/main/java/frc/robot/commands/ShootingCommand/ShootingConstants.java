@@ -13,6 +13,17 @@ public final class ShootingConstants {
   public static final LoggedTunableNumber FeederRotpsTunable =
       new LoggedTunableNumber("Shooting/FeederRotps", 95);
 
+  // Motion compensation tuning. Ball speed is estimated from flywheel speed so the command can
+  // calculate a distance-based flight time, then clamp it to a realistic range.
+//   public static final LoggedTunableNumber BallSpeedMpsPerShooterRotpsTunable =
+//       new LoggedTunableNumber("Shooting/MotionComp/BallSpeedMpsPerShooterRotps", 0.09);
+//   public static final LoggedTunableNumber MinFlightTimeSecTunable =
+//       new LoggedTunableNumber("Shooting/MotionComp/MinFlightTimeSec", 0.15);
+//   public static final LoggedTunableNumber MaxFlightTimeSecTunable =
+//       new LoggedTunableNumber("Shooting/MotionComp/MaxFlightTimeSec", 0.75);
+//   public static final LoggedTunableNumber CompensationScaleTunable =
+//       new LoggedTunableNumber("Shooting/MotionComp/CompensationScale", 1.0);
+
   // Readiness tolerances used to decide when AIM is satisfied and we may shoot.
   public static final double SHOOTER_VELOCITY_TOLERANCE_ROTPS = 1.0;
   public static final double HOOD_ANGLE_TOLERANCE_ROT = 0.02;
