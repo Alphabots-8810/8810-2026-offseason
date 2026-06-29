@@ -14,12 +14,18 @@ import frc.lib.io.MotorIOPhoenix6.NeutralMode;
 import frc.lib.io.MotorIOSim.MotorIOSimConfig;
 
 public final class IntakeDeployConstants {
-  public static final String CAN_BUS = "rio";
+  public static final String CAN_BUS = "Canivore";
 
   public static final int IntakeDeploy_ID = 22;
 
   public static final double IntakeDeploy_ROTOR_TO_MECHANISM_RATIO = 1 / 3.3; // 33mm per rot
   public static final double IntakeOutPosition = 55.; // cm
+
+  // Dynamic Motion Magic default profile (mechanism units: rot/s, rot/s^2, rot/s^3). Applied at
+  // construction; pass a different profile per move via the setPositionCentimeter overload.
+  public static final double DEFAULT_CRUISE_VELOCITY = 200.0;
+  public static final double DEFAULT_ACCELERATION = 1000.0;
+  public static final double DEFAULT_JERK = 0.0;
 
   public static final MotorIOPhoenix6Config IntakeDeploy_CONFIG =
       new MotorIOPhoenix6Config(IntakeDeploy_ID, CAN_BUS)
@@ -27,7 +33,7 @@ public final class IntakeDeployConstants {
           .withInverted(false)
           .withNeutralMode(NeutralMode.BRAKE)
           .withCurrentLimits(30.0, 60.0)
-          .withMotionMagic(200.0, 1000.0, 0)
+          .withDynamicMotionMagic(DEFAULT_CRUISE_VELOCITY, DEFAULT_ACCELERATION, DEFAULT_JERK)
           .withSlot0(20, 0.0, 3, 0.0, 0.0, 0.0, 0.0)
           .withClosedLoopOutput(ClosedLoopOutput.TORQUE_CURRENT_FOC);
 

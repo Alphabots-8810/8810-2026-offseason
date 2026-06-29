@@ -64,6 +64,12 @@ public class MotorSubsystem extends SubsystemBase {
     io.setPositionRot(positionRot);
   }
 
+  public void setMotionMagicConstraints(
+      double cruiseVelocityRotPerSec, double accelerationRotPerSecSq, double jerkRotPerSecCubed) {
+    io.setMotionMagicConstraints(
+        cruiseVelocityRotPerSec, accelerationRotPerSecSq, jerkRotPerSecCubed);
+  }
+
   public void setEncoderPositionRot(double positionRot) {
     io.setEncoderPositionRot(positionRot);
   }

@@ -1,4 +1,4 @@
-package frc.robot.commands;
+package frc.robot.commands.AutoalignIntakeCommand;
 
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.ProfiledPIDController;
@@ -17,22 +17,16 @@ import java.util.function.DoubleSupplier;
 
 /**
  * Drives field-relative from the joysticks while running the intake and using a profiled PID
- * controller to keep the <b>back</b> of the robot pointed along the robot's direction of motion (so
- * the intake leads into whatever the driver is translating toward). When the sticks are inside the
- * deadband the last commanded heading is held.
+ * controller to keep the <b>intake</b> pointed along the robot's direction of motion (so the intake
+ * leads into whatever the driver is translating toward). The intake is on the robot's tail, so the
+ * target heading is 180 deg from the direction of motion. When the sticks are inside the deadband
+ * the last commanded heading is held.
  */
 public class AutoalignIntake extends Command {
   private final Drive drive;
   private final IntakeRoller roller;
   private final DoubleSupplier xSupplier;
   private final DoubleSupplier ySupplier;
-
-  private static final double DEADBAND = 0.1;
-  private static final double ANGLE_KP = 5.0;
-  private static final double ANGLE_KD = 0.4;
-  private static final double ANGLE_MAX_VELOCITY = 8.0;
-  private static final double ANGLE_MAX_ACCELERATION = 20.0;
-  private static final double ROLLER_VELOCITY_ROT_PER_SEC = -20.0;
 
   private final ProfiledPIDController angleController;
   private Rotation2d targetHeading = Rotation2d.kZero;
@@ -45,10 +39,12 @@ public class AutoalignIntake extends Command {
 
     angleController =
         new ProfiledPIDController(
-            ANGLE_KP,
+            AutoalignIntakeConstants.ANGLE_KP,
             0.0,
-            ANGLE_KD,
-            new TrapezoidProfile.Constraints(ANGLE_MAX_VELOCITY, ANGLE_MAX_ACCELERATION));
+            AutoalignIntakeConstants.ANGLE_KD,
+            new TrapezoidProfile.Constraints(
+                AutoalignIntakeConstants.ANGLE_MAX_VELOCITY,
+                AutoalignIntakeConstants.ANGLE_MAX_ACCELERATION));
     angleController.enableContinuousInput(-Math.PI, Math.PI);
 
     addRequirements(drive, roller);
@@ -63,7 +59,7 @@ public class AutoalignIntake extends Command {
 
   @Override
   public void execute() {
-    roller.setVelocityRotPerSec(ROLLER_VELOCITY_ROT_PER_SEC);
+    roller.setVelocityRotPerSec(AutoalignIntakeConstants.ROLLER_VELOCITY_ROT_PER_SEC);
 
     // Linear velocity (unitless, field-relative) from the joysticks.
     Translation2d linearVelocity =
@@ -81,13 +77,18 @@ public class AutoalignIntake extends Command {
       if (isFlipped) {
         motionDirection = motionDirection.plus(Rotation2d.kPi);
       }
-      // Align the BACK of the robot with the direction of motion -> rotate 180 deg.
+      // The intake is on the robot's tail, so point the heading 180 deg away from the direction of
+      // motion -> the tail (intake) leads into the travel direction.
       targetHeading = motionDirection.plus(Rotation2d.kPi);
     }
 
-    // Profiled PID on heading produces the angular velocity command.
+    // Profiled PID on heading produces the angular velocity command, clamped so it can't dominate
+    // the module speed budget and starve translation.
     double omega =
-        angleController.calculate(drive.getRotation().getRadians(), targetHeading.getRadians());
+        MathUtil.clamp(
+            angleController.calculate(drive.getRotation().getRadians(), targetHeading.getRadians()),
+            -AutoalignIntakeConstants.MAX_ANGULAR_VELOCITY_RAD_PER_SEC,
+            AutoalignIntakeConstants.MAX_ANGULAR_VELOCITY_RAD_PER_SEC);
 
     ChassisSpeeds speeds =
         new ChassisSpeeds(
@@ -108,7 +109,8 @@ public class AutoalignIntake extends Command {
 
   private static Translation2d getLinearVelocityFromJoysticks(double x, double y) {
     // Apply deadband on the magnitude so diagonal motion isn't clipped per-axis.
-    double linearMagnitude = MathUtil.applyDeadband(Math.hypot(x, y), DEADBAND);
+    double linearMagnitude =
+        MathUtil.applyDeadband(Math.hypot(x, y), AutoalignIntakeConstants.DEADBAND);
     Rotation2d linearDirection = new Rotation2d(Math.atan2(y, x));
 
     // Square magnitude for more precise control at low speeds.

@@ -13,6 +13,9 @@ import com.ctre.phoenix6.BaseStatusSignal;
 import com.ctre.phoenix6.CANBus;
 import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
+import com.ctre.phoenix6.controls.ControlRequest;
+import com.ctre.phoenix6.controls.DynamicMotionMagicTorqueCurrentFOC;
+import com.ctre.phoenix6.controls.DynamicMotionMagicVoltage;
 import com.ctre.phoenix6.controls.Follower;
 import com.ctre.phoenix6.controls.MotionMagicTorqueCurrentFOC;
 import com.ctre.phoenix6.controls.MotionMagicVoltage;
@@ -58,6 +61,10 @@ public class MotorIOPhoenix6 implements MotorIO {
     public ClosedLoopOutput closedLoopOutput = ClosedLoopOutput.VOLTAGE;
     public GravityMode gravityMode = GravityMode.NONE;
     public boolean useMotionMagic = false;
+    // When true, position moves use Dynamic Motion Magic: the cruise/accel/jerk ride in the control
+    // request and can be changed per call via setMotionMagicConstraints(). Requires a CAN FD bus
+    // (CANivore); not supported on the roboRIO CAN bus.
+    public boolean useDynamicMotionMagic = false;
     public double motionMagicCruiseVelocityRotPerSec = 0.0;
     public double motionMagicAccelerationRotPerSecSq = 0.0;
     public double motionMagicJerkRotPerSecCubed = 0.0;
@@ -121,6 +128,21 @@ public class MotorIOPhoenix6 implements MotorIO {
       return this;
     }
 
+    /**
+     * Enables Dynamic Motion Magic. The given values are the initial cruise velocity, acceleration,
+     * and jerk; they can be changed at runtime with {@link #setMotionMagicConstraints}. Requires a
+     * CAN FD bus (CANivore).
+     */
+    public MotorIOPhoenix6Config withDynamicMotionMagic(
+        double cruiseVelocityRotPerSec, double accelerationRotPerSecSq, double jerkRotPerSecCubed) {
+      useMotionMagic = true;
+      useDynamicMotionMagic = true;
+      motionMagicCruiseVelocityRotPerSec = cruiseVelocityRotPerSec;
+      motionMagicAccelerationRotPerSecSq = accelerationRotPerSecSq;
+      motionMagicJerkRotPerSecCubed = jerkRotPerSecCubed;
+      return this;
+    }
+
     public MotorIOPhoenix6Config withFollower(int id, boolean opposeMasterDirection) {
       followers.add(new FollowerConfig(id, opposeMasterDirection));
       return this;
@@ -159,6 +181,10 @@ public class MotorIOPhoenix6 implements MotorIO {
   private final MotionMagicVoltage motionMagicVoltageRequest = new MotionMagicVoltage(0.0);
   private final MotionMagicTorqueCurrentFOC motionMagicTorqueCurrentRequest =
       new MotionMagicTorqueCurrentFOC(0.0);
+  private final DynamicMotionMagicVoltage dynamicMotionMagicVoltageRequest =
+      new DynamicMotionMagicVoltage(0.0, 0.0, 0.0);
+  private final DynamicMotionMagicTorqueCurrentFOC dynamicMotionMagicTorqueCurrentRequest =
+      new DynamicMotionMagicTorqueCurrentFOC(0.0, 0.0, 0.0);
 
   private final StatusSignal<Angle> position;
   private final StatusSignal<AngularVelocity> velocity;
@@ -174,8 +200,16 @@ public class MotorIOPhoenix6 implements MotorIO {
   private double velocitySetpointRadPerSec = 0.0;
   private double positionSetpointRad = 0.0;
 
+  // Live constraints used by Dynamic Motion Magic; changeable at runtime.
+  private double dynamicCruiseVelocityRotPerSec;
+  private double dynamicAccelerationRotPerSecSq;
+  private double dynamicJerkRotPerSecCubed;
+
   public MotorIOPhoenix6(MotorIOPhoenix6Config config) {
     this.config = config;
+    dynamicCruiseVelocityRotPerSec = config.motionMagicCruiseVelocityRotPerSec;
+    dynamicAccelerationRotPerSecSq = config.motionMagicAccelerationRotPerSecSq;
+    dynamicJerkRotPerSecCubed = config.motionMagicJerkRotPerSecCubed;
     var canBus = createCANBus(config.canBus);
     talon = new TalonFX(config.canId, canBus);
 
@@ -280,7 +314,9 @@ public class MotorIOPhoenix6 implements MotorIO {
     velocitySetpointRadPerSec = 0.0;
     positionSetpointRad = positionRad;
     double positionRotations = Units.radiansToRotations(positionRad);
-    if (config.useMotionMagic) {
+    if (config.useDynamicMotionMagic) {
+      talon.setControl(dynamicPositionRequest(positionRotations));
+    } else if (config.useMotionMagic) {
       talon.setControl(
           switch (config.closedLoopOutput) {
             case VOLTAGE -> motionMagicVoltageRequest.withPosition(positionRotations);
@@ -347,7 +383,9 @@ public class MotorIOPhoenix6 implements MotorIO {
     voltageSetpoint = 0.0;
     velocitySetpointRadPerSec = 0.0;
     positionSetpointRad = Units.rotationsToRadians(positionRot);
-    if (config.useMotionMagic) {
+    if (config.useDynamicMotionMagic) {
+      talon.setControl(dynamicPositionRequest(positionRot));
+    } else if (config.useMotionMagic) {
       talon.setControl(
           switch (config.closedLoopOutput) {
             case VOLTAGE -> motionMagicVoltageRequest.withPosition(positionRot);
@@ -360,6 +398,30 @@ public class MotorIOPhoenix6 implements MotorIO {
             case TORQUE_CURRENT_FOC -> positionTorqueCurrentRequest.withPosition(positionRot);
           });
     }
+  }
+
+  /** Builds a Dynamic Motion Magic request to the given position using the live constraints. */
+  private ControlRequest dynamicPositionRequest(double positionRot) {
+    return switch (config.closedLoopOutput) {
+      case VOLTAGE -> dynamicMotionMagicVoltageRequest
+          .withPosition(positionRot)
+          .withVelocity(dynamicCruiseVelocityRotPerSec)
+          .withAcceleration(dynamicAccelerationRotPerSecSq)
+          .withJerk(dynamicJerkRotPerSecCubed);
+      case TORQUE_CURRENT_FOC -> dynamicMotionMagicTorqueCurrentRequest
+          .withPosition(positionRot)
+          .withVelocity(dynamicCruiseVelocityRotPerSec)
+          .withAcceleration(dynamicAccelerationRotPerSecSq)
+          .withJerk(dynamicJerkRotPerSecCubed);
+    };
+  }
+
+  @Override
+  public void setMotionMagicConstraints(
+      double cruiseVelocityRotPerSec, double accelerationRotPerSecSq, double jerkRotPerSecCubed) {
+    dynamicCruiseVelocityRotPerSec = cruiseVelocityRotPerSec;
+    dynamicAccelerationRotPerSecSq = accelerationRotPerSecSq;
+    dynamicJerkRotPerSecCubed = jerkRotPerSecCubed;
   }
 
   @Override

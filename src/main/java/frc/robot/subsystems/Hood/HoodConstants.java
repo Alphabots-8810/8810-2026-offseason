@@ -20,6 +20,9 @@ public final class HoodConstants {
 
   public static final double Hood_ROTOR_TO_MECHANISM_RATIO = 56.3636363636363636366363636;
 
+  // Mechanism position (rotations) the encoder is reset to once the hood drives into its hard stop.
+  public static final double HoodZeroPosition = 0.0;
+
   public static final MotorIOPhoenix6Config Hood_CONFIG =
       new MotorIOPhoenix6Config(Hood_ID, CAN_BUS)
           .withRotorToMechanismRatio(Hood_ROTOR_TO_MECHANISM_RATIO)

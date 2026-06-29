@@ -26,6 +26,16 @@ public class IntakeDeploy extends MotorSubsystem {
     setPositionRot(Centimeter);
   }
 
+  /**
+   * Moves to a position using an explicit Dynamic Motion Magic profile for this move. The
+   * constraints stay in effect until the next call that changes them.
+   */
+  public void setPositionCentimeter(
+      double Centimeter, double cruiseVelocity, double acceleration, double jerk) {
+    setMotionMagicConstraints(cruiseVelocity, acceleration, jerk);
+    setPositionRot(Centimeter);
+  }
+
   public double getPositionCentimeter() {
     return getPositionRot();
   }

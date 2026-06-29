@@ -18,6 +18,13 @@ public final class ShootingConstants {
   public static final double HOOD_ANGLE_TOLERANCE_ROT = 0.02;
   public static final double AIM_ANGLE_TOLERANCE_RAD = Units.degreesToRadians(2.0);
 
+  // Once SHOOT starts and the CANrange reports a long-distance reading, wait this long (seconds)
+  // before retracting the intake.
+  public static final LoggedTunableNumber RETRACT_DELAY_SEC =
+      new LoggedTunableNumber("Shooting/retract_delay", 0.6);
+  // Intake deploy position to retract to, in centimeters.
+  public static final double INTAKE_RETRACT_POSITION_CM = 29.0;
+
   // Distance (meters, robot to HUB) -> shooter flywheel velocity (rotations / sec).
   public static final InterpolatingDoubleTreeMap distanceToShooterRotps =
       new InterpolatingDoubleTreeMap();

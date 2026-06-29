@@ -20,9 +20,9 @@ import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
-import frc.robot.commands.AutoalignIntake;
+import frc.robot.commands.AutoalignIntakeCommand.AutoalignIntake;
 import frc.robot.commands.DriveCommands;
-import frc.robot.commands.IntakeDeployOutwardZeroCommand;
+import frc.robot.commands.HoodZeroCommand;
 import frc.robot.commands.ManualCommand.Manual;
 import frc.robot.commands.ShootingCommand.Shooting;
 import frc.robot.generated.TunerConstants;
@@ -38,6 +38,7 @@ import frc.robot.subsystems.drive.GyroIOPigeon2;
 import frc.robot.subsystems.drive.ModuleIO;
 import frc.robot.subsystems.drive.ModuleIOSim;
 import frc.robot.subsystems.drive.ModuleIOTalonFX;
+import frc.robot.util.LoggedTunableNumber;
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
 
 /**
@@ -59,6 +60,7 @@ public class RobotContainer {
   private final Indexer indexer = Indexer.mInstance;
   private final IntakeDeploy intakeDeploy = IntakeDeploy.mInstance;
   private final IntakeRoller intakeRoller = IntakeRoller.mInstance;
+  private final LoggedTunableNumber retract = new LoggedTunableNumber("retract", 25);
 
   // Controller
   private final CommandXboxController controller = new CommandXboxController(0);
@@ -200,7 +202,7 @@ public class RobotContainer {
         .onTrue(
             new InstantCommand(
                 () -> {
-                  IntakeDeploy.mInstance.setPositionCentimeter(55);
+                  IntakeDeploy.mInstance.setPositionCentimeter(retract.getAsDouble(), 50, 1000, 0);
                   IntakeRoller.mInstance.setVelocityRotPerSec(40);
                 },
                 IntakeDeploy.mInstance,
@@ -210,21 +212,30 @@ public class RobotContainer {
         .onFalse(
             new InstantCommand(
                 () -> {
-                  IntakeDeploy.mInstance.setPositionCentimeter(55);
+                  IntakeDeploy.mInstance.setPositionCentimeter(retract.getAsDouble(), 50, 1000, 0);
                   IntakeRoller.mInstance.setV(0);
                 },
                 IntakeDeploy.mInstance,
                 IntakeRoller.mInstance));
     controller.x().whileTrue(new Manual());
     controller.y().whileTrue(new Shooting());
-    controller.rightBumper().onTrue(new IntakeDeployOutwardZeroCommand());
+    controller.rightBumper().onTrue(new HoodZeroCommand());
     controller
         .rightStick()
-        .onTrue(new AutoalignIntake(() -> controller.getLeftY(), () -> controller.getLeftX()));
+        .onTrue(new AutoalignIntake(() -> -controller.getLeftY(), () -> -controller.getLeftX()));
     controller
         .rightTrigger(0.5)
-        .onTrue(new InstantCommand(() -> IntakeRoller.mInstance.setVelocityRotPerSec(20)));
+        .onTrue(
+            new InstantCommand(
+                () -> {
+                  IntakeRoller.mInstance.setVelocityRotPerSec(35);
+                  IntakeDeploy.mInstance.setPositionCentimeter(55, 200, 1000, 0);
+                }));
+
     controller.rightTrigger().onFalse(new InstantCommand(() -> IntakeRoller.mInstance.setV(0)));
+    controller
+        .leftBumper()
+        .whileTrue(new AutoalignIntake(() -> -controller.getLeftY(), () -> -controller.getLeftX()));
   }
 
   /**

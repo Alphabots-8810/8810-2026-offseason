@@ -67,4 +67,8 @@ public interface MotorIO {
   public default void setPositionRot(double positionRot) {}
 
   public default void setEncoderPositionRot(double positionRot) {}
+
+  /** Updates the Dynamic Motion Magic cruise velocity, acceleration, and jerk for future moves. */
+  public default void setMotionMagicConstraints(
+      double cruiseVelocityRotPerSec, double accelerationRotPerSecSq, double jerkRotPerSecCubed) {}
 }

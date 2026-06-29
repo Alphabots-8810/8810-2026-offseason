@@ -7,6 +7,7 @@ import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
+import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.Constants;
 import frc.robot.subsystems.Drum.Drum;
@@ -20,10 +21,15 @@ import frc.robot.subsystems.drive.Drive;
 public class Shooting extends Command {
   private enum States {
     AIM,
-    SHOOT
+    SHOOT,
+    RETRACT
   }
 
   private States state;
+
+  // Times the delay between the long-range CANrange reading and retracting the intake.
+  private final Timer retractTimer = new Timer();
+  private boolean retractTimerStarted;
 
   // Same gains as DriveCommands.joystickDriveAtAngle, used to rotate the chassis toward the HUB.
   private final ProfiledPIDController angleController =
@@ -44,6 +50,9 @@ public class Shooting extends Command {
   @Override
   public void initialize() {
     state = States.AIM;
+    retractTimerStarted = false;
+    retractTimer.stop();
+    retractTimer.reset();
     angleController.reset(Drive.mInstance.getRotation().getRadians());
   }
 
@@ -115,14 +124,46 @@ public class Shooting extends Command {
     }
   }
 
-  private void shoot() {
-    // Keep tracking the HUB and holding flywheel/hood while feeding balls.
-    prepareShooter();
-    aimDrive();
+  /** Drive the full feed path (intake roller, indexer, feeder) at the tuned shooting speeds. */
+  private void runFeed() {
     IntakeRoller.mInstance.setVelocityRotPerSec(
         ShootingConstants.IntakeRollerRotpsTunable.getAsDouble());
     Indexer.mInstance.setVelocityRotPerSec(ShootingConstants.IndexerRotpsTunable.getAsDouble());
     Feeder.mInstance.setVelocityRotPerSec(ShootingConstants.FeederRotpsTunable.getAsDouble());
+  }
+
+  /**
+   * True when the CANrange reports a long-distance reading. The sensor isn't wired up yet, so this
+   * defaults to true.
+   */
+  private boolean canRange() {
+    return true;
+  }
+
+  private void shoot() {
+    // Keep tracking the HUB and holding flywheel/hood while feeding balls.
+    prepareShooter();
+    aimDrive();
+    runFeed();
+
+    // Once a long-range CANrange reading is seen, start the timer and retract after it expires.
+    if (canRange() && !retractTimerStarted) {
+      retractTimer.restart();
+      retractTimerStarted = true;
+    }
+    if (retractTimerStarted
+        && retractTimer.hasElapsed(ShootingConstants.RETRACT_DELAY_SEC.getAsDouble())) {
+      state = States.RETRACT;
+    }
+  }
+
+  private void retract() {
+    // Keep shooting while pulling the intake back to the retracted position.
+    prepareShooter();
+    aimDrive();
+    runFeed();
+    IntakeDeploy.mInstance.setPositionCentimeter(
+        ShootingConstants.INTAKE_RETRACT_POSITION_CM, 50, 1000, 0);
   }
 
   @Override
@@ -130,6 +171,7 @@ public class Shooting extends Command {
     switch (state) {
       case AIM -> aim();
       case SHOOT -> shoot();
+      case RETRACT -> retract();
     }
   }
 
