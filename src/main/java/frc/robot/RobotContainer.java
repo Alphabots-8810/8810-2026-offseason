@@ -22,8 +22,9 @@ import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.commands.AutoalignIntakeCommand.AutoalignIntake;
 import frc.robot.commands.DriveCommands;
+import frc.robot.commands.FerryCommand.Ferry;
 import frc.robot.commands.HoodZeroCommand;
-import frc.robot.commands.ManualCommand.Manual;
+import frc.robot.commands.IntakeDeployOutwardZeroCommand;
 import frc.robot.commands.ShootingCommand.Shooting;
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.Drum.Drum;
@@ -217,9 +218,11 @@ public class RobotContainer {
                 },
                 IntakeDeploy.mInstance,
                 IntakeRoller.mInstance));
-    controller.x().whileTrue(new Manual());
+    controller.x().whileTrue(new Ferry());
     controller.y().whileTrue(new Shooting());
-    controller.rightBumper().onTrue(new HoodZeroCommand());
+    controller
+        .rightBumper()
+        .onTrue(new HoodZeroCommand().alongWith(new IntakeDeployOutwardZeroCommand()));
     controller
         .rightStick()
         .onTrue(new AutoalignIntake(() -> -controller.getLeftY(), () -> -controller.getLeftX()));

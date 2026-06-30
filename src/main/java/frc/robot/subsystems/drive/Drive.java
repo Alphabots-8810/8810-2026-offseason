@@ -33,6 +33,7 @@ import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.math.system.plant.DCMotor;
+import edu.wpi.first.units.Units;
 import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.Alert.AlertType;
 import edu.wpi.first.wpilibj.DriverStation;
@@ -42,6 +43,8 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.Constants;
 import frc.robot.Constants.Mode;
+import frc.robot.FieldLayout;
+import frc.robot.commands.FerryCommand.FerryConstants;
 import frc.robot.generated.TunerConstants;
 import frc.robot.util.LimelightHelpers;
 import frc.robot.util.LocalADStarAK;
@@ -217,6 +220,42 @@ public class Drive extends SubsystemBase {
     Logger.recordOutput(
         "Odometry/DistanceToHub",
         getPose().getTranslation().getDistance(new Translation2d(11.9, 4.035)));
+
+    Logger.recordOutput("Odometry/DistanceToFerryTarget", calculateFerryTargetDistance());
+  }
+
+  private double calculateFerryTargetDistance() {
+    Pose2d pose = getPose();
+    boolean isRed =
+        DriverStation.getAlliance().isPresent()
+            && DriverStation.getAlliance().get() == Alliance.Red;
+
+    if (FieldLayout.isPoseWithinAllianceZone(isRed, pose)) return 0.0;
+
+    Translation2d target;
+    if (FieldLayout.isPoseOnLeftSide(isRed, pose.getMeasureY())) {
+      if (FieldLayout.distanceFromAllianceWall(pose.getMeasureX(), isRed)
+          .lte(FieldLayout.FIELD_LENGTH.minus(Units.Feet.of(13)))) {
+        target = FieldLayout.handleAllianceFlip(FerryConstants.kBlueLeftFerry, isRed);
+      } else if (FieldLayout.distanceFromAllianceWall(pose.getMeasureX(), isRed)
+          .lte(FieldLayout.FIELD_LENGTH.minus(Units.Feet.of(6.5)))) {
+        target = FieldLayout.handleAllianceFlip(FerryConstants.kBlueLeftFarAllianceFerry, isRed);
+      } else {
+        target = FieldLayout.handleAllianceFlip(FerryConstants.kBlueLeftNeutralFerry, isRed);
+      }
+    } else {
+      if (FieldLayout.distanceFromAllianceWall(pose.getMeasureX(), isRed)
+          .lte(FieldLayout.FIELD_LENGTH.minus(Units.Feet.of(13)))) {
+        target = FieldLayout.handleAllianceFlip(FerryConstants.kBlueRightFerry, isRed);
+      } else if (FieldLayout.distanceFromAllianceWall(pose.getMeasureX(), isRed)
+          .lte(FieldLayout.FIELD_LENGTH.minus(Units.Feet.of(6.5)))) {
+        target = FieldLayout.handleAllianceFlip(FerryConstants.kBlueRightFarAllianceFerry, isRed);
+      } else {
+        target = FieldLayout.handleAllianceFlip(FerryConstants.kBlueRightNeutralFerry, isRed);
+      }
+    }
+    Logger.recordOutput("Odometry/TargetPose", new Pose2d(target, Rotation2d.k180deg));
+    return pose.getTranslation().getDistance(target);
   }
 
   /**

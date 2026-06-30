@@ -7,10 +7,10 @@ import edu.wpi.first.units.Units;
 public class FerryConstants {
   // Depot-Side Alliance Corner
   public static final Translation2d kBlueLeftFerry =
-      new Translation2d(Units.Meters.of(0.5), Units.Feet.of(15.5));
+      new Translation2d(Units.Meters.of(0.5), Units.Feet.of(18.5));
   // Outpost-Side Alliance Corner
   public static final Translation2d kBlueRightFerry =
-      new Translation2d(Units.Meters.of(0.5), Units.Feet.of(8.0));
+      new Translation2d(Units.Meters.of(0.5), Units.Feet.of(6.0));
   // Depot-Side Alliance Trench
   public static final Translation2d kBlueLeftNeutralFerry =
       new Translation2d(Units.Meters.of(5.5), Units.Feet.of(18.0));
@@ -30,26 +30,16 @@ public class FerryConstants {
       new InterpolatingDoubleTreeMap();
 
   static {
-    FerryDistanceToDrumRotps.put(Double.MIN_VALUE, 30.0);
-    FerryDistanceToDrumRotps.put(4.977, 30.0);
-    FerryDistanceToDrumRotps.put(6.902, 31.7);
-    FerryDistanceToDrumRotps.put(8.477, 35.0);
-    FerryDistanceToDrumRotps.put(9.029, 36.7);
-    FerryDistanceToDrumRotps.put(9.590, 40.0);
-    FerryDistanceToDrumRotps.put(10.061, 42.5);
-    FerryDistanceToDrumRotps.put(12.460, 52.5);
-    FerryDistanceToDrumRotps.put(13.133, 58.3);
-    FerryDistanceToDrumRotps.put(Double.MAX_VALUE, 60.0);
+    FerryDistanceToDrumRotps.put(Double.MIN_VALUE, 50.0);
+    FerryDistanceToDrumRotps.put(5.22, 50.0);
+    FerryDistanceToDrumRotps.put(8.03, 60.0);
+    FerryDistanceToDrumRotps.put(10.03, 75.0);
+    FerryDistanceToDrumRotps.put(Double.MAX_VALUE, 75.0);
 
-    FerryDistanceToDrumRotps.put(Double.MIN_VALUE, 52.5);
-    FerryDistanceToHoodAngle.put(4.977, 52.5);
-    FerryDistanceToHoodAngle.put(6.902, 50.5);
-    FerryDistanceToHoodAngle.put(8.477, 48.5);
-    FerryDistanceToHoodAngle.put(9.029, 46.5);
-    FerryDistanceToHoodAngle.put(9.590, 45.5);
-    FerryDistanceToHoodAngle.put(10.061, 43.5);
-    FerryDistanceToHoodAngle.put(12.460, 45.0);
-    FerryDistanceToHoodAngle.put(13.133, 45.0);
-    FerryDistanceToHoodAngle.put(Double.MAX_VALUE, 45.0);
+    FerryDistanceToDrumRotps.put(Double.MIN_VALUE, 40.0);
+    FerryDistanceToHoodAngle.put(5.22, 40.0);
+    FerryDistanceToHoodAngle.put(8.03, 45.0);
+    FerryDistanceToHoodAngle.put(10.03, 49.5);
+    FerryDistanceToHoodAngle.put(Double.MAX_VALUE, 49.5);
   }
 }
