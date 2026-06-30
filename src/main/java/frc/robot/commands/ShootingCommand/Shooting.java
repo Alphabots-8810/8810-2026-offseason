@@ -10,6 +10,7 @@ import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.Constants;
+import frc.robot.subsystems.BallSensors.BallSensors;
 import frc.robot.subsystems.Drum.Drum;
 import frc.robot.subsystems.Feeder.Feeder;
 import frc.robot.subsystems.Hood.Hood;
@@ -132,10 +133,6 @@ public class Shooting extends Command {
     Feeder.mInstance.setVelocityRotPerSec(ShootingConstants.FeederRotpsTunable.getAsDouble());
   }
 
-  /**
-   * True when the CANrange reports a long-distance reading. The sensor isn't wired up yet, so this
-   * defaults to true.
-   */
   private boolean canRange() {
     return true;
   }
