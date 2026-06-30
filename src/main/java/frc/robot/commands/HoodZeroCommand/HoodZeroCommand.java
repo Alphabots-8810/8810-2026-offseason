@@ -1,4 +1,4 @@
-package frc.robot.commands;
+package frc.robot.commands.HoodZeroCommand;
 
 import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.math.filter.Debouncer.DebounceType;
@@ -7,12 +7,9 @@ import frc.robot.subsystems.Hood.Hood;
 import frc.robot.subsystems.Hood.HoodConstants;
 
 public class HoodZeroCommand extends Command {
-  private static final double ZEROING_VOLTAGE = -3.0;
-  private static final double CURRENT_THRESHOLD = 40.0;
-  private static final double DEBOUNCE_TIME_SECONDS = 0.3;
 
   private final Debouncer currentDebouncer =
-      new Debouncer(DEBOUNCE_TIME_SECONDS, DebounceType.kRising);
+      new Debouncer(HoodZeroCommandConstants.DEBOUNCE_TIME_SECONDS, DebounceType.kRising);
 
   public HoodZeroCommand() {
     addRequirements(Hood.mInstance);
@@ -20,13 +17,14 @@ public class HoodZeroCommand extends Command {
 
   @Override
   public void initialize() {
-    Hood.mInstance.setV(ZEROING_VOLTAGE);
+    Hood.mInstance.setV(HoodZeroCommandConstants.ZEROING_VOLTAGE);
   }
 
   @Override
   public boolean isFinished() {
     return currentDebouncer.calculate(
-        Math.abs(Hood.mInstance.getStatorCurrentAmps()) > CURRENT_THRESHOLD);
+        Math.abs(Hood.mInstance.getStatorCurrentAmps())
+            > HoodZeroCommandConstants.CURRENT_THRESHOLD);
   }
 
   @Override

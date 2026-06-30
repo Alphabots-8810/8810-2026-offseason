@@ -21,15 +21,16 @@ import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.commands.AutoalignIntakeCommand.AutoalignIntake;
-import frc.robot.subsystems.BallSensors.BallSensors;
-import frc.robot.commands.DriveCommands;
+import frc.robot.commands.DriveCommands.DriveCommands;
 import frc.robot.commands.FerryCommand.Ferry;
-import frc.robot.commands.HoodZeroCommand;
-import frc.robot.commands.IntakeDeployOutwardZeroCommand;
+import frc.robot.commands.HoodZeroCommand.HoodZeroCommand;
+import frc.robot.commands.IntakeCommand.IntakeCommand;
+import frc.robot.commands.IntakeDeployOutwardZeroCommand.IntakeDeployOutwardZeroCommand;
 import frc.robot.commands.ManualCommand.Manual;
 import frc.robot.commands.ShootingCommand.Shooting;
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.Drum.Drum;
+import frc.robot.subsystems.FeedPath.FeedPath;
 import frc.robot.subsystems.Feeder.Feeder;
 import frc.robot.subsystems.Hood.Hood;
 import frc.robot.subsystems.Indexer.Indexer;
@@ -58,7 +59,7 @@ public class RobotContainer {
   // constructor and flashes the motor config (gear ratio, PID, etc). Without an eager reference
   // these only initialize on first button press, so the config is never applied at deploy.
   private final Drum drum = Drum.mInstance;
-  private final BallSensors ballSensors = BallSensors.mInstance;
+  private final FeedPath feedPath = FeedPath.mInstance;
   private final Feeder feeder = Feeder.mInstance;
   private final Hood hood = Hood.mInstance;
   private final Indexer indexer = Indexer.mInstance;
@@ -229,16 +230,7 @@ public class RobotContainer {
     controller
         .rightStick()
         .onTrue(new AutoalignIntake(() -> -controller.getLeftY(), () -> -controller.getLeftX()));
-    controller
-        .leftTrigger(0.5)
-        .onTrue(
-            new InstantCommand(
-                () -> {
-                  IntakeRoller.mInstance.setVelocityRotPerSec(35);
-                  IntakeDeploy.mInstance.setPositionCentimeter(55, 200, 1000, 0);
-                }));
-
-    controller.leftTrigger().onFalse(new InstantCommand(() -> IntakeRoller.mInstance.setV(0)));
+    controller.leftTrigger(0.5).whileTrue(new IntakeCommand());
     controller
         .leftBumper()
         .whileTrue(new AutoalignIntake(() -> -controller.getLeftY(), () -> -controller.getLeftX()));

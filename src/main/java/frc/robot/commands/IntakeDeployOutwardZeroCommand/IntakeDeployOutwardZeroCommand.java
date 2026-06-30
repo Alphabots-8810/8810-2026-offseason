@@ -1,4 +1,4 @@
-package frc.robot.commands;
+package frc.robot.commands.IntakeDeployOutwardZeroCommand;
 
 import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.math.filter.Debouncer.DebounceType;
@@ -7,12 +7,10 @@ import frc.robot.subsystems.IntakeDeploy.IntakeDeploy;
 import frc.robot.subsystems.IntakeDeploy.IntakeDeployConstants;
 
 public class IntakeDeployOutwardZeroCommand extends Command {
-  private static final double ZEROING_VOLTAGE = 3.0;
-  private static final double CURRENT_THRESHOLD = 40.0;
-  private static final double DEBOUNCE_TIME_SECONDS = 0.3;
 
   private final Debouncer currentDebouncer =
-      new Debouncer(DEBOUNCE_TIME_SECONDS, DebounceType.kRising);
+      new Debouncer(
+          IntakeDeployOutwardZeroCommandConstants.DEBOUNCE_TIME_SECONDS, DebounceType.kRising);
 
   public IntakeDeployOutwardZeroCommand() {
     addRequirements(IntakeDeploy.mInstance);
@@ -20,13 +18,14 @@ public class IntakeDeployOutwardZeroCommand extends Command {
 
   @Override
   public void initialize() {
-    IntakeDeploy.mInstance.setV(ZEROING_VOLTAGE);
+    IntakeDeploy.mInstance.setV(IntakeDeployOutwardZeroCommandConstants.ZEROING_VOLTAGE);
   }
 
   @Override
   public boolean isFinished() {
     return currentDebouncer.calculate(
-        Math.abs(IntakeDeploy.mInstance.getStatorCurrentAmps()) > CURRENT_THRESHOLD);
+        Math.abs(IntakeDeploy.mInstance.getStatorCurrentAmps())
+            > IntakeDeployOutwardZeroCommandConstants.CURRENT_THRESHOLD);
   }
 
   @Override
