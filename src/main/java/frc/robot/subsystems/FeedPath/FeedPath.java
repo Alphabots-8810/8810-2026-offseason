@@ -38,8 +38,8 @@ public class FeedPath extends SubsystemBase {
       ballTunnelIO =
           new SensorIOCANRange(
               new SensorIOCANRangeConfig(
-                      FeedPathConstants.BALL_TUNNEL_CAN_ID, FeedPathConstants.CAN_BUS)
-                  .withMaxDistance(FeedPathConstants.BALL_TUNNEL_MAX_DISTANCE_M)
+                      FeedPathConstants.INDEXER_CAN_ID, FeedPathConstants.CAN_BUS)
+                  .withMaxDistance(FeedPathConstants.INDEXER_MAX_DISTANCE_M)
                   .withMinSignalStrength(FeedPathConstants.MIN_SIGNAL_STRENGTH)
                   .withProximityThreshold(
                       FeedPathConstants.PROXIMITY_THRESHOLD_M,
@@ -47,12 +47,12 @@ public class FeedPath extends SubsystemBase {
                   .withFov(
                       0,
                       0,
-                      FeedPathConstants.BALL_TUNNEL_FOV_RANGE_X_DEG,
-                      FeedPathConstants.BALL_TUNNEL_FOV_RANGE_Y_DEG),
-              FeedPathConstants.BALL_TUNNEL_DEBOUNCE_SECS);
+                      FeedPathConstants.INDEXER_FOV_RANGE_X_DEG,
+                      FeedPathConstants.INDEXER_FOV_RANGE_Y_DEG),
+              FeedPathConstants.INDEXER_DEBOUNCE_SECS);
     } else {
       hopperIO = new SensorIOSim(() -> false, FeedPathConstants.HOPPER_DEBOUNCE_SECS);
-      ballTunnelIO = new SensorIOSim(() -> false, FeedPathConstants.BALL_TUNNEL_DEBOUNCE_SECS);
+      ballTunnelIO = new SensorIOSim(() -> false, FeedPathConstants.INDEXER_DEBOUNCE_SECS);
     }
   }
 
