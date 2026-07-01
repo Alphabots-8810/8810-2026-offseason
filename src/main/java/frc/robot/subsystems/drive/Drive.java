@@ -295,6 +295,30 @@ public class Drive extends SubsystemBase {
   }
 
   /**
+   * Runs the drive at the desired velocity, rotating around a custom center of rotation instead of
+   * the robot center. Used for corner-pivot maneuvers.
+   *
+   * @param speeds Desired chassis speeds (typically only omega is nonzero)
+   * @param centerOfRotation Center of rotation in robot frame (meters)
+   */
+  public void runVelocityWithCenterOfRotation(
+      ChassisSpeeds speeds, Translation2d centerOfRotation) {
+    ChassisSpeeds discreteSpeeds = ChassisSpeeds.discretize(speeds, 0.02);
+    SwerveModuleState[] setpointStates =
+        kinematics.toSwerveModuleStates(discreteSpeeds, centerOfRotation);
+    SwerveDriveKinematics.desaturateWheelSpeeds(setpointStates, TunerConstants.kSpeedAt12Volts);
+
+    Logger.recordOutput("SwerveStates/Setpoints", setpointStates);
+    Logger.recordOutput("SwerveChassisSpeeds/Setpoints", discreteSpeeds);
+
+    for (int i = 0; i < 4; i++) {
+      modules[i].runSetpoint(setpointStates[i]);
+    }
+
+    Logger.recordOutput("SwerveStates/SetpointsOptimized", setpointStates);
+  }
+
+  /**
    * Stops the drive and turns the modules to an X arrangement to resist movement. The modules will
    * return to their normal orientations the next time a nonzero velocity is requested.
    */

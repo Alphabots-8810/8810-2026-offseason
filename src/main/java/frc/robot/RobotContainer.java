@@ -21,6 +21,8 @@ import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.commands.AutoalignIntakeCommand.AutoalignIntake;
+import frc.robot.commands.DriveCommands.CornerPivotCommand;
+import frc.robot.commands.DriveCommands.CornerPivotCommand.PivotCorner;
 import frc.robot.commands.DriveCommands.DriveCommands;
 import frc.robot.commands.FerryCommand.Ferry;
 import frc.robot.commands.HoodZeroCommand.HoodZeroCommand;
@@ -173,7 +175,8 @@ public class RobotContainer {
             () -> -controller.getRightX()));
     controller
         .povUp()
-        .whileTrue(Commands.run(() -> drive.runVelocity(new ChassisSpeeds(2, 0, 0)), drive));
+        .whileTrue(
+            new CornerPivotCommand(drive, PivotCorner.FRONT_LEFT, () -> -controller.getRightX()));
     controller
         .povLeft()
         .whileTrue(Commands.run(() -> drive.runVelocity(new ChassisSpeeds(0, 2, 0)), drive));
