@@ -7,23 +7,23 @@ import frc.robot.util.LoggedTunableNumber;
 public final class ShootingConstants {
   // Feed speeds applied once we transition into the SHOOT state.
   public static final LoggedTunableNumber IndexerRotpsTunable =
-      new LoggedTunableNumber("Shooting/IndexerRotps", 95);
+      new LoggedTunableNumber("Shooting/IndexerRotps", 70);
   public static final LoggedTunableNumber IntakeRollerRotpsTunable =
       new LoggedTunableNumber("Shooting/IntakeRollerRotps", 40);
   public static final LoggedTunableNumber FeederRotpsTunable =
-      new LoggedTunableNumber("Shooting/FeederRotps", 95);
+      new LoggedTunableNumber("Shooting/FeederRotps", 70);
 
   // Readiness tolerances used to decide when AIM is satisfied and we may shoot.
-  public static final double SHOOTER_VELOCITY_TOLERANCE_ROTPS = 1.0;
+  public static final double SHOOTER_VELOCITY_TOLERANCE_ROTPS = 0.5;
   public static final double HOOD_ANGLE_TOLERANCE_ROT = 0.02;
   public static final double AIM_ANGLE_TOLERANCE_RAD = Units.degreesToRadians(2.0);
 
   // Once SHOOT starts and the CANrange reports a long-distance reading, wait this long (seconds)
   // before retracting the intake.
   public static final LoggedTunableNumber RETRACT_DELAY_SEC =
-      new LoggedTunableNumber("Shooting/retract_delay", 0.6);
+      new LoggedTunableNumber("Shooting/retract_delay", 0.3);
   // Intake deploy position to retract to, in centimeters.
-  public static final double INTAKE_RETRACT_POSITION_CM = 29.0;
+  public static final double INTAKE_RETRACT_POSITION_CM = 20.0;
 
   // Distance (meters, robot to HUB) -> shooter flywheel velocity (rotations / sec).
   public static final InterpolatingDoubleTreeMap distanceToShooterRotps =
@@ -47,13 +47,13 @@ public final class ShootingConstants {
      * 5.06 25 61
      *
      */
-    distanceToShooterRotps.put(2.118, 47.5);
-    distanceToShooterRotps.put(2.54, 49.08);
-    distanceToShooterRotps.put(3.05, 51.08);
-    distanceToShooterRotps.put(3.53, 53.26);
-    distanceToShooterRotps.put(4.15, 56.);
-    distanceToShooterRotps.put(4.55, 58.);
-    distanceToShooterRotps.put(5.06, 61.);
+    distanceToShooterRotps.put(2.118, 49.5);
+    distanceToShooterRotps.put(2.54, 51.08);
+    distanceToShooterRotps.put(3.05, 53.6);
+    distanceToShooterRotps.put(3.53, 55.26);
+    distanceToShooterRotps.put(4.15, 58.);
+    distanceToShooterRotps.put(4.55, 61.2);
+    distanceToShooterRotps.put(5.06, 64.2);
     distanceToHoodDeg.put(2.118, 0.);
     distanceToHoodDeg.put(2.54, 5.);
     distanceToHoodDeg.put(3.05, 12.);

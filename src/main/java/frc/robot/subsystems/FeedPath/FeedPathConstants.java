@@ -11,20 +11,20 @@ public final class FeedPathConstants {
 
   // 共用的近距离检测参数
   public static final double MIN_SIGNAL_STRENGTH = 2500;
-  public static final double PROXIMITY_THRESHOLD_M = 0.4;
+  public static final double PROXIMITY_THRESHOLD_M = 0.55;
   public static final double PROXIMITY_HYSTERESIS_M = 0.01;
 
   // Hopper（入口）：宽视角，慢防抖，避免误触发
   public static final double HOPPER_MAX_DISTANCE_M = 0.3;
   public static final double HOPPER_DEBOUNCE_SECS = 0.75;
-  public static final double HOPPER_FOV_RANGE_X_DEG = 27.0;
+  public static final double HOPPER_FOV_RANGE_X_DEG = 6.75;
   public static final double HOPPER_FOV_RANGE_Y_DEG = 6.75;
 
   // BallTunnel（通道）：窄视角，快防抖，实时判断球是否到位
   public static final double INDEXER_MAX_DISTANCE_M = 0.6;
-  public static final double INDEXER_DEBOUNCE_SECS = 0.06;
+  public static final double INDEXER_DEBOUNCE_SECS = 0.01;
   public static final double INDEXER_FOV_RANGE_X_DEG = 10.0;
-  public static final double INDEXER_FOV_RANGE_Y_DEG = 6.75;
+  public static final double INDEXER_FOV_RANGE_Y_DEG = 20;
 
   private FeedPathConstants() {}
 }

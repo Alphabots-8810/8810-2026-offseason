@@ -22,18 +22,19 @@ public final class DrumConstants {
   public static final int Drum_RD_ID = 43;
 
   public static final double Drum_ROTOR_TO_MECHANISM_RATIO = 1.0;
-
+  public static final double StowVelocity = 47.5;
   public static final MotorIOPhoenix6Config Drum_CONFIG =
       new MotorIOPhoenix6Config(Drum_LU_ID, CAN_BUS)
           .withRotorToMechanismRatio(Drum_ROTOR_TO_MECHANISM_RATIO)
           .withInverted(false)
           .withNeutralMode(NeutralMode.COAST)
           .withCurrentLimits(60.0, 120.0)
-          .withSlot0(20, 0.0, 0.0, 5, 0.2 * 2.0 * Math.PI, 0.0, 0.0)
+          .withSlot0(20, 0.0, 0.0, 5, 0.2, 0.0, 0.0)
           .withClosedLoopOutput(ClosedLoopOutput.TORQUE_CURRENT_FOC)
           .withFollower(Drum_LD_ID, false)
           .withFollower(Drum_RU_ID, true)
-          .withFollower(Drum_RD_ID, true);
+          .withFollower(Drum_RD_ID, true)
+          .withPeakTorqueLimit(800, 0);
 
   public static final MotorIOSimConfig Drum_SIM_CONFIG =
       new MotorIOSimConfig()

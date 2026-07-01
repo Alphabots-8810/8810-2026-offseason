@@ -14,6 +14,7 @@ import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.subsystems.IntakeRoller.IntakeRoller;
 import frc.robot.subsystems.drive.Drive;
 import java.util.function.DoubleSupplier;
+import org.littletonrobotics.junction.Logger;
 
 /**
  * Drives field-relative from the joysticks while running the intake and using a profiled PID
@@ -27,16 +28,18 @@ public class AutoalignIntake extends Command {
   private final IntakeRoller roller;
   private final DoubleSupplier xSupplier;
   private final DoubleSupplier ySupplier;
+  private final DoubleSupplier manualFixSupplier;
 
   private final ProfiledPIDController angleController;
   private Rotation2d targetHeading = Rotation2d.kZero;
 
-  public AutoalignIntake(DoubleSupplier xSupplier, DoubleSupplier ySupplier) {
+  public AutoalignIntake(
+      DoubleSupplier xSupplier, DoubleSupplier ySupplier, DoubleSupplier manualFixSupplier) {
     this.xSupplier = xSupplier;
     this.ySupplier = ySupplier;
     this.drive = Drive.mInstance;
     this.roller = IntakeRoller.mInstance;
-
+    this.manualFixSupplier = manualFixSupplier;
     angleController =
         new ProfiledPIDController(
             AutoalignIntakeConstants.ANGLE_KP,
@@ -59,6 +62,8 @@ public class AutoalignIntake extends Command {
 
   @Override
   public void execute() {
+    Logger.recordOutput("AutoalignIntake/Setpoint", angleController.getSetpoint());
+    Logger.recordOutput("AutoalignIntake/Position", drive.getRotation().getRadians());
     roller.setVelocityRotPerSec(AutoalignIntakeConstants.ROLLER_VELOCITY_ROT_PER_SEC);
 
     // Linear velocity (unitless, field-relative) from the joysticks.
@@ -68,7 +73,6 @@ public class AutoalignIntake extends Command {
     boolean isFlipped =
         DriverStation.getAlliance().isPresent()
             && DriverStation.getAlliance().get() == Alliance.Red;
-
     // Only update the heading goal when the driver is actually translating, otherwise the
     // direction is undefined (atan2(0, 0)) and we would snap to an arbitrary angle.
     if (linearVelocity.getNorm() > 1e-6) {
@@ -81,7 +85,10 @@ public class AutoalignIntake extends Command {
       // motion -> the tail (intake) leads into the travel direction.
       targetHeading = motionDirection.plus(Rotation2d.kPi);
     }
-
+    targetHeading =
+        targetHeading.plus(
+            new Rotation2d(
+                manualFixSupplier.getAsDouble() * AutoalignIntakeConstants.MANUAL_FIX_SCALOR));
     // Profiled PID on heading produces the angular velocity command, clamped so it can't dominate
     // the module speed budget and starve translation.
     double omega =
@@ -90,6 +97,7 @@ public class AutoalignIntake extends Command {
             -AutoalignIntakeConstants.MAX_ANGULAR_VELOCITY_RAD_PER_SEC,
             AutoalignIntakeConstants.MAX_ANGULAR_VELOCITY_RAD_PER_SEC);
 
+    linearVelocity = linearVelocity.times(Math.cos(angleController.getPositionError()));
     ChassisSpeeds speeds =
         new ChassisSpeeds(
             linearVelocity.getX() * drive.getMaxLinearSpeedMetersPerSec(),

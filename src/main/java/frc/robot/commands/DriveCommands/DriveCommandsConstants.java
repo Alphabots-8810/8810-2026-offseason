@@ -1,7 +1,7 @@
 package frc.robot.commands.DriveCommands;
 
 public final class DriveCommandsConstants {
-  public static final double DEADBAND = 0.1;
+  public static final double DEADBAND = 0.03;
   public static final double ANGLE_KP = 5.0;
   public static final double ANGLE_KD = 0.4;
   public static final double ANGLE_MAX_VELOCITY = 8.0;

@@ -68,11 +68,20 @@ public class MotorIOPhoenix6 implements MotorIO {
     public double motionMagicCruiseVelocityRotPerSec = 0.0;
     public double motionMagicAccelerationRotPerSecSq = 0.0;
     public double motionMagicJerkRotPerSecCubed = 0.0;
+    public double peakReverseTorqueCurrent = -800;
+    public double peakForwardTorqueCurrent = 800;
     public List<FollowerConfig> followers = new ArrayList<>();
 
     public MotorIOPhoenix6Config(int canId, String canBus) {
       this.canId = canId;
       this.canBus = canBus;
+    }
+
+    public MotorIOPhoenix6Config withPeakTorqueLimit(
+        double forwardTorqueCurrent, double reverseTorqueCurrent) {
+      this.peakForwardTorqueCurrent = forwardTorqueCurrent;
+      this.peakReverseTorqueCurrent = reverseTorqueCurrent;
+      return this;
     }
 
     public MotorIOPhoenix6Config withRotorToMechanismRatio(double rotorToMechanismRatio) {
@@ -224,6 +233,8 @@ public class MotorIOPhoenix6 implements MotorIO {
     talonConfig.CurrentLimits.SupplyCurrentLimitEnable = config.supplyCurrentLimitEnabled;
     talonConfig.CurrentLimits.StatorCurrentLimit = config.statorCurrentLimitAmps;
     talonConfig.CurrentLimits.StatorCurrentLimitEnable = config.statorCurrentLimitEnabled;
+    talonConfig.TorqueCurrent.PeakForwardTorqueCurrent = config.peakForwardTorqueCurrent;
+    talonConfig.TorqueCurrent.PeakReverseTorqueCurrent = config.peakReverseTorqueCurrent;
     talonConfig.Slot0.kP = config.kP;
     talonConfig.Slot0.kI = config.kI;
     talonConfig.Slot0.kD = config.kD;

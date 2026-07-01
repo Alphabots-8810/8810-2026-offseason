@@ -8,11 +8,11 @@ public final class ManualConstants {
   public static final LoggedTunableNumber HoodDegTunable =
       new LoggedTunableNumber("Manual/HoodDegree", 0);
   public static final LoggedTunableNumber IndexerRotpsTunable =
-      new LoggedTunableNumber("Manual/IndexerRotps", 40);
+      new LoggedTunableNumber("Manual/IndexerRotps", 80);
   public static final LoggedTunableNumber IntakeRollerRotpsTunable =
       new LoggedTunableNumber("Manual/IntakeRollerRotps", 40);
   public static final LoggedTunableNumber FeederRotpsTunable =
-      new LoggedTunableNumber("Manual/FeederRotps", 40);
+      new LoggedTunableNumber("Manual/FeederRotps", 80);
   /*
    * 2.118 0 47.5
    * 2.54  5  49.08

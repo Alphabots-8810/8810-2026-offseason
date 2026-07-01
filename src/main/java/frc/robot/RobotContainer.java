@@ -24,7 +24,6 @@ import frc.robot.commands.AutoalignIntakeCommand.AutoalignIntake;
 import frc.robot.commands.DriveCommands.CornerPivotCommand;
 import frc.robot.commands.DriveCommands.CornerPivotCommand.PivotCorner;
 import frc.robot.commands.DriveCommands.DriveCommands;
-import frc.robot.commands.FerryCommand.Ferry;
 import frc.robot.commands.HoodZeroCommand.HoodZeroCommand;
 import frc.robot.commands.IntakeCommand.IntakeCommand;
 import frc.robot.commands.IntakeDeployOutwardZeroCommand.IntakeDeployOutwardZeroCommand;
@@ -186,6 +185,8 @@ public class RobotContainer {
     controller
         .povRight()
         .whileTrue(Commands.run(() -> drive.runVelocity(new ChassisSpeeds(0, -2, 0)), drive));
+    controller.a().onTrue(new InstantCommand(() -> Drum.mInstance.setV(5)));
+    controller.a().onFalse(new InstantCommand(() -> Drum.mInstance.setVelocityRotPerSec(47)));
 
     controller
         .b()
@@ -205,39 +206,64 @@ public class RobotContainer {
                     drive)
                 .ignoringDisable(true));
 
+    // controller
+    //     .a()
+    //     .onTrue(
+    //         new InstantCommand(
+    //             () -> {
+    //               IntakeDeploy.mInstance.setPositionCentimeter(retract.getAsDouble(), 50, 1000,
+    // 0);
+    //               IntakeRoller.mInstance.setVelocityRotPerSec(40);
+    //             },
+    //             IntakeDeploy.mInstance,
+    //             IntakeRoller.mInstance));
+    // controller
+    //     .a()
+    //     .onFalse(
+    //         new InstantCommand(
+    //             () -> {
+    //               IntakeDeploy.mInstance.setPositionCentimeter(retract.getAsDouble(), 50, 1000,
+    // 0);
+    //               IntakeRoller.mInstance.setV(0);
+    //             },
+    //             IntakeDeploy.mInstance,
+    //             IntakeRoller.mInstance));
+    controller.x().whileTrue(new Manual());
+    controller.rightBumper().whileTrue(new Shooting());
     controller
-        .a()
+        .rightTrigger()
         .onTrue(
             new InstantCommand(
                 () -> {
-                  IntakeDeploy.mInstance.setPositionCentimeter(retract.getAsDouble(), 50, 1000, 0);
-                  IntakeRoller.mInstance.setVelocityRotPerSec(40);
-                },
-                IntakeDeploy.mInstance,
-                IntakeRoller.mInstance));
+                  Indexer.mInstance.setV(-3);
+                  Feeder.mInstance.setV(-3);
+                }));
     controller
-        .a()
+        .rightTrigger()
         .onFalse(
             new InstantCommand(
                 () -> {
-                  IntakeDeploy.mInstance.setPositionCentimeter(retract.getAsDouble(), 50, 1000, 0);
-                  IntakeRoller.mInstance.setV(0);
-                },
-                IntakeDeploy.mInstance,
-                IntakeRoller.mInstance));
-    controller.x().whileTrue(new Ferry());
-    controller.y().whileTrue(new Manual());
-    controller
-        .rightBumper()
-        .onTrue(new HoodZeroCommand().alongWith(new IntakeDeployOutwardZeroCommand()));
+                  Indexer.mInstance.setV(0);
+                  Feeder.mInstance.setV(0);
+                }));
+
+    controller.y().onTrue(new HoodZeroCommand().alongWith(new IntakeDeployOutwardZeroCommand()));
     controller
         .rightStick()
-        .onTrue(new AutoalignIntake(() -> -controller.getLeftY(), () -> -controller.getLeftX()));
-    controller.leftTrigger(0.5).whileTrue(new IntakeCommand());
+        .onTrue(
+            new AutoalignIntake(
+                () -> -controller.getLeftY(),
+                () -> -controller.getLeftX(),
+                () -> -controller.getRightX()));
+    controller.leftTrigger(0.1).whileTrue(new IntakeCommand());
     controller
         .leftBumper()
-        .whileTrue(new AutoalignIntake(() -> -controller.getLeftY(), () -> -controller.getLeftX()));
-    controller.rightTrigger().whileTrue(new Shooting());
+        .whileTrue(
+            new AutoalignIntake(
+                () -> -controller.getLeftY(),
+                () -> -controller.getLeftX(),
+                () -> -controller.getRightX()));
+    // controller.rightTrigger().whileTrue(new Shooting());
   }
 
   /**

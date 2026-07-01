@@ -11,12 +11,15 @@ import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.Constants;
 import frc.robot.subsystems.Drum.Drum;
+import frc.robot.subsystems.Drum.DrumConstants;
 import frc.robot.subsystems.Feeder.Feeder;
 import frc.robot.subsystems.Hood.Hood;
 import frc.robot.subsystems.Indexer.Indexer;
 import frc.robot.subsystems.IntakeDeploy.IntakeDeploy;
+import frc.robot.subsystems.IntakeDeploy.IntakeDeployConstants;
 import frc.robot.subsystems.IntakeRoller.IntakeRoller;
 import frc.robot.subsystems.drive.Drive;
+import org.littletonrobotics.junction.Logger;
 
 public class Shooting extends Command {
   private enum States {
@@ -33,7 +36,7 @@ public class Shooting extends Command {
 
   // Same gains as DriveCommands.joystickDriveAtAngle, used to rotate the chassis toward the HUB.
   private final ProfiledPIDController angleController =
-      new ProfiledPIDController(5.0, 0.0, 0.4, new TrapezoidProfile.Constraints(8.0, 30.0));
+      new ProfiledPIDController(6.0, 0.0, 0.4, new TrapezoidProfile.Constraints(12.0, 40.0));
 
   public Shooting() {
     addRequirements(
@@ -107,7 +110,9 @@ public class Shooting extends Command {
             < ShootingConstants.HOOD_ANGLE_TOLERANCE_ROT;
     boolean aimReady =
         Math.abs(angleController.getPositionError()) < ShootingConstants.AIM_ANGLE_TOLERANCE_RAD;
-
+    Logger.recordOutput("Shooging/aimReady", aimReady);
+    Logger.recordOutput("Shooging/hoodReady", hoodReady);
+    Logger.recordOutput("Shooging/drumReady", drumReady);
     return drumReady && hoodReady && aimReady;
   }
 
@@ -143,7 +148,7 @@ public class Shooting extends Command {
     runFeed();
 
     // Once a long-range CANrange reading is seen, start the timer and retract after it expires.
-    if (canRange() && !retractTimerStarted) {
+    if (!retractTimerStarted) {
       retractTimer.restart();
       retractTimerStarted = true;
     }
@@ -178,9 +183,12 @@ public class Shooting extends Command {
 
   @Override
   public void end(boolean interrupted) {
-    Drum.mInstance.stop();
-    Hood.mInstance.stop();
+    Drum.mInstance.setVelocityRotPerSec(DrumConstants.StowVelocity);
+    ;
+    Hood.mInstance.setPositionRot(0);
+    ;
     IntakeRoller.mInstance.stop();
+    IntakeDeploy.mInstance.setPositionCentimeter(IntakeDeployConstants.IntakeOutPosition);
     Indexer.mInstance.stop();
     Feeder.mInstance.stop();
     Drive.mInstance.stop();
