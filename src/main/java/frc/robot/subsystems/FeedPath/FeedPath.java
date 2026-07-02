@@ -26,8 +26,8 @@ public class FeedPath extends SubsystemBase {
                   .withMaxDistance(FeedPathConstants.HOPPER_MAX_DISTANCE_M)
                   .withMinSignalStrength(FeedPathConstants.MIN_SIGNAL_STRENGTH)
                   .withProximityThreshold(
-                      FeedPathConstants.PROXIMITY_THRESHOLD_M,
-                      FeedPathConstants.PROXIMITY_HYSTERESIS_M)
+                      FeedPathConstants.HOPPER_PROXIMITY_THRESHOLD_M,
+                      FeedPathConstants.HOPPER_PROXIMITY_HYSTERESIS_M)
                   .withFov(
                       0,
                       0,
@@ -42,8 +42,8 @@ public class FeedPath extends SubsystemBase {
                   .withMaxDistance(FeedPathConstants.INDEXER_MAX_DISTANCE_M)
                   .withMinSignalStrength(FeedPathConstants.MIN_SIGNAL_STRENGTH)
                   .withProximityThreshold(
-                      FeedPathConstants.PROXIMITY_THRESHOLD_M,
-                      FeedPathConstants.PROXIMITY_HYSTERESIS_M)
+                      FeedPathConstants.HOPPER_PROXIMITY_THRESHOLD_M,
+                      FeedPathConstants.HOPPER_PROXIMITY_HYSTERESIS_M)
                   .withFov(
                       0,
                       0,

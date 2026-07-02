@@ -11,8 +11,10 @@ public final class FeedPathConstants {
 
   // 共用的近距离检测参数
   public static final double MIN_SIGNAL_STRENGTH = 2500;
-  public static final double PROXIMITY_THRESHOLD_M = 0.55;
-  public static final double PROXIMITY_HYSTERESIS_M = 0.01;
+  public static final double HOPPER_PROXIMITY_THRESHOLD_M = 0.55;
+  public static final double HOPPER_PROXIMITY_HYSTERESIS_M = 0.01;
+  public static final double INDEXER_PROXIMITY_THRESHOLD_M = 0.55;
+  public static final double INDEXER_PROXIMITY_HYSTERESIS_M = 0.01;
 
   // Hopper（入口）：宽视角，慢防抖，避免误触发
   public static final double HOPPER_MAX_DISTANCE_M = 0.3;
