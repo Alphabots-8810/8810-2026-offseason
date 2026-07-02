@@ -131,8 +131,12 @@ public class Shooting extends Command {
 
   /** Drive the full feed path (intake roller, indexer, feeder) at the tuned shooting speeds. */
   private void runFeed() {
-    IntakeRoller.mInstance.setVelocityRotPerSec(
-        ShootingConstants.IntakeRollerRotpsTunable.getAsDouble());
+    if (IntakeDeploy.mInstance.getPositionCentimeter() <= 30) {
+      IntakeRoller.mInstance.setVelocityRotPerSec(0);
+    } else {
+      IntakeRoller.mInstance.setVelocityRotPerSec(
+          ShootingConstants.IntakeRollerRotpsTunable.getAsDouble());
+    }
     Indexer.mInstance.setVelocityRotPerSec(ShootingConstants.IndexerRotpsTunable.getAsDouble());
     Feeder.mInstance.setVelocityRotPerSec(ShootingConstants.FeederRotpsTunable.getAsDouble());
   }
