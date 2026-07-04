@@ -1,10 +1,10 @@
 package frc.robot.commands.ShootingCommand;
 
-import edu.wpi.first.math.controller.ProfiledPIDController;
+import edu.wpi.first.math.MathUtil;
+import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
-import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.Timer;
@@ -35,8 +35,7 @@ public class Shooting extends Command {
   private boolean retractTimerStarted;
 
   // Same gains as DriveCommands.joystickDriveAtAngle, used to rotate the chassis toward the HUB.
-  private final ProfiledPIDController angleController =
-      new ProfiledPIDController(6.0, 0.0, 0.4, new TrapezoidProfile.Constraints(12.0, 40.0));
+  private final PIDController angleController = new PIDController(5.4, 0.0, 0.2);
 
   public Shooting() {
     addRequirements(
@@ -48,6 +47,7 @@ public class Shooting extends Command {
         IntakeDeploy.mInstance,
         IntakeRoller.mInstance);
     angleController.enableContinuousInput(-Math.PI, Math.PI);
+    // angleController.setTolerance(ShootingConstants.AIM_ANGLE_TOLERANCE_RAD);
   }
 
   @Override
@@ -56,7 +56,7 @@ public class Shooting extends Command {
     retractTimerStarted = false;
     retractTimer.stop();
     retractTimer.reset();
-    angleController.reset(Drive.mInstance.getRotation().getRadians());
+    angleController.reset();
   }
 
   /** The HUB translation for the current alliance. */
@@ -84,9 +84,11 @@ public class Shooting extends Command {
     double omega =
         angleController.calculate(
             Drive.mInstance.getRotation().getRadians(), angleToHub().getRadians());
+    omega = MathUtil.clamp(omega, -15, 15);
     Drive.mInstance.runVelocity(
         ChassisSpeeds.fromFieldRelativeSpeeds(
             new ChassisSpeeds(0.0, 0.0, omega), Drive.mInstance.getRotation()));
+    Logger.recordOutput("Shooging/aimError", angleController.getPositionError());
   }
 
   /** Drive the flywheel and hood to the interpolated setpoints for the current distance. */
@@ -109,7 +111,9 @@ public class Shooting extends Command {
         Math.abs(Hood.mInstance.getPositionRot() - targetHoodRot)
             < ShootingConstants.HOOD_ANGLE_TOLERANCE_ROT;
     boolean aimReady =
-        Math.abs(angleController.getPositionError()) < ShootingConstants.AIM_ANGLE_TOLERANCE_RAD;
+        Math.abs(angleController.getError() - targetHoodRot)
+            < ShootingConstants.AIM_ANGLE_TOLERANCE_RAD;
+    ;
     Logger.recordOutput("Shooging/aimReady", aimReady);
     Logger.recordOutput("Shooging/hoodReady", hoodReady);
     Logger.recordOutput("Shooging/drumReady", drumReady);
@@ -152,7 +156,7 @@ public class Shooting extends Command {
     runFeed();
 
     // Once a long-range CANrange reading is seen, start the timer and retract after it expires.
-    if (!retractTimerStarted) {
+    if (canRange() && !retractTimerStarted) {
       retractTimer.restart();
       retractTimerStarted = true;
     }
@@ -168,7 +172,7 @@ public class Shooting extends Command {
     aimDrive();
     runFeed();
     IntakeDeploy.mInstance.setPositionCentimeter(
-        ShootingConstants.INTAKE_RETRACT_POSITION_CM, 50, 1000, 0);
+        ShootingConstants.INTAKE_RETRACT_POSITION_CM, 80, 1000, 0);
   }
 
   @Override

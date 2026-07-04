@@ -42,8 +42,8 @@ public class FeedPath extends SubsystemBase {
                   .withMaxDistance(FeedPathConstants.INDEXER_MAX_DISTANCE_M)
                   .withMinSignalStrength(FeedPathConstants.MIN_SIGNAL_STRENGTH)
                   .withProximityThreshold(
-                      FeedPathConstants.HOPPER_PROXIMITY_THRESHOLD_M,
-                      FeedPathConstants.HOPPER_PROXIMITY_HYSTERESIS_M)
+                      FeedPathConstants.INDEXER_PROXIMITY_THRESHOLD_M,
+                      FeedPathConstants.INDEXER_PROXIMITY_HYSTERESIS_M)
                   .withFov(
                       0,
                       0,

@@ -11,6 +11,10 @@ import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj2.command.Command;
+import frc.robot.commands.IntakeCommand.IntakeCommandConstants;
+import frc.robot.subsystems.FeedPath.FeedPath;
+import frc.robot.subsystems.Feeder.Feeder;
+import frc.robot.subsystems.Indexer.Indexer;
 import frc.robot.subsystems.IntakeRoller.IntakeRoller;
 import frc.robot.subsystems.drive.Drive;
 import java.util.function.DoubleSupplier;
@@ -26,6 +30,8 @@ import org.littletonrobotics.junction.Logger;
 public class AutoalignIntake extends Command {
   private final Drive drive;
   private final IntakeRoller roller;
+  private final Indexer indexer;
+  private final Feeder feeder;
   private final DoubleSupplier xSupplier;
   private final DoubleSupplier ySupplier;
   private final DoubleSupplier manualFixSupplier;
@@ -39,6 +45,8 @@ public class AutoalignIntake extends Command {
     this.ySupplier = ySupplier;
     this.drive = Drive.mInstance;
     this.roller = IntakeRoller.mInstance;
+    this.indexer = Indexer.mInstance;
+    this.feeder = Feeder.mInstance;
     this.manualFixSupplier = manualFixSupplier;
     angleController =
         new ProfiledPIDController(
@@ -50,7 +58,7 @@ public class AutoalignIntake extends Command {
                 AutoalignIntakeConstants.ANGLE_MAX_ACCELERATION));
     angleController.enableContinuousInput(-Math.PI, Math.PI);
 
-    addRequirements(drive, roller);
+    addRequirements(drive, roller, feeder, indexer);
   }
 
   @Override
@@ -107,6 +115,21 @@ public class AutoalignIntake extends Command {
     drive.runVelocity(
         ChassisSpeeds.fromFieldRelativeSpeeds(
             speeds, isFlipped ? drive.getRotation().plus(Rotation2d.kPi) : drive.getRotation()));
+    if (FeedPath.mInstance.IndexerFilled()) {
+      stopIndexing();
+    } else if (FeedPath.mInstance.HopperFilled()) {
+      runIndexing();
+    } else {
+      stopIndexing();
+    }
+  }
+
+  private void runIndexing() {
+    Indexer.mInstance.setV(IntakeCommandConstants.INDEXING_VOLTAGE);
+  }
+
+  private void stopIndexing() {
+    Indexer.mInstance.stop();
   }
 
   @Override
