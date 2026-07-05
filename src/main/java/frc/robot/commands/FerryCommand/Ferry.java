@@ -183,7 +183,7 @@ public class Ferry extends Command {
     aimDrive();
     runFeed();
     IntakeDeploy.mInstance.setPositionCentimeter(
-        ShootingConstants.INTAKE_RETRACT_POSITION_CM, 50, 1000, 0);
+        ShootingConstants.INTAKE_RETRACT_POSITION_CM.getAsDouble(), 50, 1000, 0);
   }
 
   public Ferry() {

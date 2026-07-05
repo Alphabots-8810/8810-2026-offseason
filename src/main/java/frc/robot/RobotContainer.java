@@ -20,6 +20,7 @@ import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
+import frc.robot.commands.AutoTrenchCommand.AutoTrenchCommand;
 import frc.robot.commands.AutoalignIntakeCommand.AutoalignIntake;
 import frc.robot.commands.DriveCommands.CornerPivotCommand;
 import frc.robot.commands.DriveCommands.CornerPivotCommand.PivotCorner;
@@ -185,8 +186,6 @@ public class RobotContainer {
     controller
         .povRight()
         .whileTrue(Commands.run(() -> drive.runVelocity(new ChassisSpeeds(0, -2, 0)), drive));
-    controller.a().onTrue(new InstantCommand(() -> Drum.mInstance.setV(5)));
-    controller.a().onFalse(new InstantCommand(() -> Drum.mInstance.setVelocityRotPerSec(47)));
 
     controller
         .b()
@@ -263,6 +262,7 @@ public class RobotContainer {
                 () -> -controller.getLeftY(),
                 () -> -controller.getLeftX(),
                 () -> -controller.getRightX()));
+    controller.a().whileTrue(new AutoTrenchCommand(() -> controller.getLeftY()));
     // controller.rightTrigger().whileTrue(new Shooting());
   }
 

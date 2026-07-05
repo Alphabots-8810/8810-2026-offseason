@@ -172,7 +172,7 @@ public class Shooting extends Command {
     aimDrive();
     runFeed();
     IntakeDeploy.mInstance.setPositionCentimeter(
-        ShootingConstants.INTAKE_RETRACT_POSITION_CM, 80, 1000, 0);
+        ShootingConstants.INTAKE_RETRACT_POSITION_CM.getAsDouble(), 80, 1000, 0);
   }
 
   @Override

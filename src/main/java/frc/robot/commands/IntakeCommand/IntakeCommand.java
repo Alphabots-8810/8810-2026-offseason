@@ -2,13 +2,15 @@ package frc.robot.commands.IntakeCommand;
 
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.subsystems.FeedPath.FeedPath;
+import frc.robot.subsystems.Feeder.Feeder;
 import frc.robot.subsystems.Indexer.Indexer;
 import frc.robot.subsystems.IntakeDeploy.IntakeDeploy;
 import frc.robot.subsystems.IntakeRoller.IntakeRoller;
 
 public class IntakeCommand extends Command {
   public IntakeCommand() {
-    addRequirements(IntakeRoller.mInstance, IntakeDeploy.mInstance, Indexer.mInstance);
+    addRequirements(
+        IntakeRoller.mInstance, IntakeDeploy.mInstance, Indexer.mInstance, Feeder.mInstance);
   }
 
   @Override
