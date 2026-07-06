@@ -35,7 +35,7 @@ public class Shooting extends Command {
   private boolean retractTimerStarted;
 
   // Same gains as DriveCommands.joystickDriveAtAngle, used to rotate the chassis toward the HUB.
-  private final PIDController angleController = new PIDController(5.4, 0.0, 0.2);
+  private final PIDController angleController = new PIDController(5.0, 0.0, 0.2);
 
   public Shooting() {
     addRequirements(
