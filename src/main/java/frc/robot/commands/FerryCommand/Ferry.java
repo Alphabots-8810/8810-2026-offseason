@@ -232,6 +232,5 @@ public class Ferry extends Command {
     IntakeRoller.mInstance.stop();
     Indexer.mInstance.stop();
     Feeder.mInstance.stop();
-    Drive.mInstance.stop();
   }
 }

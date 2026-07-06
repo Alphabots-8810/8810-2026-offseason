@@ -1,4 +1,4 @@
-package frc.robot.commands.AutoTrenchCommand;
+﻿package frc.robot.commands.AutoTrenchCommand;
 
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.PIDController;
@@ -10,7 +10,11 @@ import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj2.command.Command;
+import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.drive.Drive;
+
+import static edu.wpi.first.units.Units.MetersPerSecond;
+
 import java.util.function.DoubleSupplier;
 import org.littletonrobotics.junction.Logger;
 
@@ -126,7 +130,7 @@ public class AutoTrenchCommand extends Command {
     double xInput =
         MathUtil.applyDeadband(
             xSupplier.getAsDouble(), AutoTrenchCommandConstants.JOYSTICK_DEADBAND);
-    return xInput * drive.getMaxLinearSpeedMetersPerSec();
+    return xInput * Drive.mInstance.getMaxLinearSpeedMetersPerSec();
   }
 
   private double calculateHeadingSpeed() {
