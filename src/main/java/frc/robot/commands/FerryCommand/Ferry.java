@@ -14,10 +14,12 @@ import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.FieldLayout;
 import frc.robot.commands.ShootingCommand.ShootingConstants;
 import frc.robot.subsystems.Drum.Drum;
+import frc.robot.subsystems.Drum.DrumConstants;
 import frc.robot.subsystems.Feeder.Feeder;
 import frc.robot.subsystems.Hood.Hood;
 import frc.robot.subsystems.Indexer.Indexer;
 import frc.robot.subsystems.IntakeDeploy.IntakeDeploy;
+import frc.robot.subsystems.IntakeDeploy.IntakeDeployConstants;
 import frc.robot.subsystems.IntakeRoller.IntakeRoller;
 import frc.robot.subsystems.drive.Drive;
 
@@ -114,16 +116,16 @@ public class Ferry extends Command {
 
   private void prepareShooter() {
     double distance = getTargetDistance();
-    Drum.mInstance.setVelocityRotPerSec(FerryConstants.FerryDistanceToDrumRotps.get(distance));
-    Hood.mInstance.setPositionRot(FerryConstants.FerryDistanceToHoodAngle.get(distance) / 360.0);
+    Drum.mInstance.setVelocityRotPerSec(FerryConstants.ferryDistanceToShooterRotps.get(distance));
+    Hood.mInstance.setPositionRot(FerryConstants.ferryDistanceToHoodDeg.get(distance) / 360.0);
   }
 
   private boolean isReadyToShoot() {
     if (t_state == ferryTargetStates.INACTIVE) return false;
 
     double distance = getTargetDistance();
-    double targetDrumRotps = FerryConstants.FerryDistanceToDrumRotps.get(distance);
-    double targetHoodRot = FerryConstants.FerryDistanceToHoodAngle.get(distance) / 360.0;
+    double targetDrumRotps = FerryConstants.ferryDistanceToShooterRotps.get(distance);
+    double targetHoodRot = FerryConstants.ferryDistanceToHoodDeg.get(distance) / 360.0;
 
     boolean drumReady =
         Math.abs(Drum.mInstance.getVelocityRotPerSec() - targetDrumRotps)
@@ -227,9 +229,12 @@ public class Ferry extends Command {
 
   @Override
   public void end(boolean interrupted) {
-    Drum.mInstance.stop();
-    Hood.mInstance.stop();
+    Drum.mInstance.setVelocityRotPerSec(DrumConstants.StowVelocity);
+    ;
+    Hood.mInstance.setPositionRot(0);
+    ;
     IntakeRoller.mInstance.stop();
+    IntakeDeploy.mInstance.setPositionCentimeter(IntakeDeployConstants.IntakeOutPosition);
     Indexer.mInstance.stop();
     Feeder.mInstance.stop();
     Drive.mInstance.stop();

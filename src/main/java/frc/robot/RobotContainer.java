@@ -1,10 +1,3 @@
-// Copyright (c) 2021-2026 Littleton Robotics
-// http://github.com/Mechanical-Advantage
-//
-// Use of this source code is governed by a BSD
-// license that can be found in the LICENSE file
-// at the root directory of this project.
-
 package frc.robot;
 
 import com.pathplanner.lib.auto.AutoBuilder;
@@ -20,11 +13,11 @@ import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
-import frc.robot.commands.AutoTrenchCommand.AutoTrenchCommand;
 import frc.robot.commands.AutoalignIntakeCommand.AutoalignIntake;
 import frc.robot.commands.DriveCommands.CornerPivotCommand;
 import frc.robot.commands.DriveCommands.CornerPivotCommand.PivotCorner;
 import frc.robot.commands.DriveCommands.DriveCommands;
+import frc.robot.commands.FerryCommand.Ferry;
 import frc.robot.commands.HoodZeroCommand.HoodZeroCommand;
 import frc.robot.commands.IntakeCommand.IntakeCommand;
 import frc.robot.commands.IntakeDeployOutwardZeroCommand.IntakeDeployOutwardZeroCommand;
@@ -262,7 +255,8 @@ public class RobotContainer {
                 () -> -controller.getLeftY(),
                 () -> -controller.getLeftX(),
                 () -> -controller.getRightX()));
-    controller.a().whileTrue(new AutoTrenchCommand(() -> controller.getLeftY()));
+
+    controller.a().whileTrue(new Ferry());
     // controller.rightTrigger().whileTrue(new Shooting());
   }
 
