@@ -130,17 +130,30 @@ public class Shooting extends Command {
     Logger.recordOutput("Shooging/aimOmegaRadPerSec", omega);
   }
 
+  /** The drum setpoint for a distance: sim-derived table times the kSpeed field knob. */
+  private double drumSetpointRotps(double distance) {
+    return ShootingConstants.distanceToShooterRotps.get(distance)
+        * ShootingConstants.kSpeedTunable.getAsDouble();
+  }
+
   /** Drive the flywheel and hood to the interpolated setpoints for the current distance. */
   private void prepareShooter() {
     double distance = distanceToHub();
-    Drum.mInstance.setVelocityRotPerSec(ShootingConstants.distanceToShooterRotps.get(distance));
+    Drum.mInstance.setVelocityRotPerSec(drumSetpointRotps(distance));
     Hood.mInstance.setPositionRot(ShootingConstants.distanceToHoodDeg.get(distance) / 360.);
+    Logger.recordOutput("Shooging/drumSetpointRotps", drumSetpointRotps(distance));
+    Logger.recordOutput("Shooging/simDrumRotps", ShootingConstants.simDrumRotps(distance));
+    // Sim-predicted hood angle (mechanism deg) for the current distance, next to the actual
+    // table setpoint so field edits to the table are visible against the model.
+    Logger.recordOutput("Shooging/simHoodDeg", ShootingConstants.simHoodDeg(distance));
+    Logger.recordOutput(
+        "Shooging/hoodSetpointDeg", ShootingConstants.distanceToHoodDeg.get(distance));
   }
 
   /** True once the flywheel, hood, and heading are all within tolerance. */
   private boolean isReadyToShoot() {
     double distance = distanceToHub();
-    double targetShooterRotps = ShootingConstants.distanceToShooterRotps.get(distance);
+    double targetShooterRotps = drumSetpointRotps(distance);
     double targetHoodRot = ShootingConstants.distanceToHoodDeg.get(distance) / 360.;
 
     boolean drumReady =
