@@ -1,6 +1,8 @@
 package frc.robot.commands.IntakeCommand;
 
 import edu.wpi.first.wpilibj2.command.Command;
+import frc.robot.Constants;
+import frc.robot.simulation.MapleSimWorld;
 import frc.robot.subsystems.FeedPath.FeedPath;
 import frc.robot.subsystems.Feeder.Feeder;
 import frc.robot.subsystems.Indexer.Indexer;
@@ -15,6 +17,9 @@ public class IntakeCommand extends Command {
 
   @Override
   public void initialize() {
+    if (Constants.currentMode == Constants.Mode.SIM) {
+      MapleSimWorld.setFuelIntakeRunning(true);
+    }
     runIntake();
     updateIndexer();
   }
@@ -59,6 +64,9 @@ public class IntakeCommand extends Command {
 
   @Override
   public void end(boolean interrupted) {
+    if (Constants.currentMode == Constants.Mode.SIM) {
+      MapleSimWorld.setFuelIntakeRunning(false);
+    }
     IntakeRoller.mInstance.stop();
     stopIndexing();
   }

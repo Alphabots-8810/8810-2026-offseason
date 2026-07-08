@@ -34,6 +34,10 @@ public final class ShootingConstants {
   public static final InterpolatingDoubleTreeMap distanceToHoodDeg =
       new InterpolatingDoubleTreeMap();
 
+    // indexer perimeter  131.88mm
+    // feeder perimeter 120mm
+  public static final InterpolatingDoubleTreeMap distanceToFeedVelo = new InterpolatingDoubleTreeMap();
+
   static {
     // PLACEHOLDER TABLE - tune on the real field. Only 2.118 m and 2.540 m are measured;
     // the rest are interpolated/extrapolated guesses so the maps cover the full range.
@@ -65,6 +69,10 @@ public final class ShootingConstants {
     // distance(m) -> shooter (rot/s)
 
     // distance(m) -> hood (deg)
+
+    distanceToFeedVelo.put(2.,100.);
+    distanceToFeedVelo.put(4.,100.);
+    distanceToFeedVelo.put(5.,80.);
 
   }
 

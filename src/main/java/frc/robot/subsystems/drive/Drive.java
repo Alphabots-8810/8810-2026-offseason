@@ -46,6 +46,7 @@ import frc.robot.Constants.Mode;
 import frc.robot.FieldLayout;
 import frc.robot.commands.FerryCommand.FerryConstants;
 import frc.robot.generated.TunerConstants;
+import frc.robot.simulation.MapleSimWorld;
 import frc.robot.util.LimelightHelpers;
 import frc.robot.util.LocalADStarAK;
 import java.util.concurrent.locks.Lock;
@@ -400,6 +401,7 @@ public class Drive extends SubsystemBase {
   /** Resets the current odometry pose. */
   public void setPose(Pose2d pose) {
     poseEstimator.resetPosition(rawGyroRotation, getModulePositions(), pose);
+    MapleSimWorld.setRobotPose(pose);
   }
 
   private void updatePoseWithLimelightMegaTag2(String llName) {
