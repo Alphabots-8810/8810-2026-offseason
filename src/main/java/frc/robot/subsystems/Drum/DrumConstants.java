@@ -29,12 +29,12 @@ public final class DrumConstants {
           .withInverted(false)
           .withNeutralMode(NeutralMode.COAST)
           .withCurrentLimits(60.0, 80.0)
-          .withSlot0(12, 0.0, 0.0, 5, 0.2, 0.0, 0.0)
+          .withSlot0(9.5, 0.0, 0.0, 3, 0.1, 0.0, 0.0)
           .withClosedLoopOutput(ClosedLoopOutput.TORQUE_CURRENT_FOC)
           .withFollower(Drum_LD_ID, false)
           .withFollower(Drum_RU_ID, true)
           .withFollower(Drum_RD_ID, true)
-          .withPeakTorqueLimit(800, -20);
+          .withPeakTorqueLimit(800, -60);
 
   public static final MotorIOSimConfig Drum_SIM_CONFIG =
       new MotorIOSimConfig()

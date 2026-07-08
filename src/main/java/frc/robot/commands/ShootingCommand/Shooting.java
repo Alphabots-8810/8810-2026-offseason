@@ -1,10 +1,13 @@
 package frc.robot.commands.ShootingCommand;
 
 import edu.wpi.first.math.MathUtil;
-import edu.wpi.first.math.controller.PIDController;
+import edu.wpi.first.math.controller.ProfiledPIDController;
+import edu.wpi.first.math.filter.Debouncer;
+import edu.wpi.first.math.filter.Debouncer.DebounceType;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
+import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.Timer;
@@ -34,8 +37,19 @@ public class Shooting extends Command {
   private final Timer retractTimer = new Timer();
   private boolean retractTimerStarted;
 
-  // Same gains as DriveCommands.joystickDriveAtAngle, used to rotate the chassis toward the HUB.
-  private final PIDController angleController = new PIDController(5.0, 0.0, 0.2);
+  // Profiled heading controller: the trapezoid profile plans the turn (velocity is fed
+  // forward), the PID only corrects tracking error against the moving profile setpoint.
+  private final ProfiledPIDController angleController =
+      new ProfiledPIDController(
+          ShootingConstants.AIM_KP,
+          0.0,
+          ShootingConstants.AIM_KD,
+          new TrapezoidProfile.Constraints(
+              ShootingConstants.AIM_MAX_VELOCITY_RAD_PER_SEC,
+              ShootingConstants.AIM_MAX_ACCELERATION_RAD_PER_SEC2));
+
+  // Requires isReadyToShoot() to hold continuously before AIM -> SHOOT (recreated in initialize).
+  private Debouncer readyDebouncer;
 
   public Shooting() {
     addRequirements(
@@ -56,7 +70,12 @@ public class Shooting extends Command {
     retractTimerStarted = false;
     retractTimer.stop();
     retractTimer.reset();
-    angleController.reset();
+    // Seed the profile with the current heading and yaw rate so the plan starts from the
+    // robot's actual state instead of jerking from zero.
+    angleController.reset(
+        Drive.mInstance.getRotation().getRadians(),
+        Drive.mInstance.getChassisSpeeds().omegaRadiansPerSecond);
+    readyDebouncer = new Debouncer(ShootingConstants.READY_DEBOUNCE_SEC, DebounceType.kRising);
   }
 
   /** The HUB translation for the current alliance. */
@@ -79,16 +98,36 @@ public class Shooting extends Command {
     return hubLocation().minus(Drive.mInstance.getPose().getTranslation()).getAngle();
   }
 
+  /** Wrapped heading error between the robot and the HUB goal (NOT the profile setpoint). */
+  private double goalErrorRad() {
+    return MathUtil.angleModulus(
+        angleToHub().getRadians() - Drive.mInstance.getRotation().getRadians());
+  }
+
   /** Spin the chassis in place to face the HUB. */
   private void aimDrive() {
+    double currentAngleRad = Drive.mInstance.getRotation().getRadians();
+    double targetAngleRad = angleToHub().getRadians();
+    // PID correction against the moving profile setpoint, plus the profile's planned
+    // velocity as feedforward so the turn actually runs at the planned speed.
     double omega =
-        angleController.calculate(
-            Drive.mInstance.getRotation().getRadians(), angleToHub().getRadians());
+        angleController.calculate(currentAngleRad, targetAngleRad)
+            + angleController.getSetpoint().velocity;
     omega = MathUtil.clamp(omega, -15, 15);
+    // Kill the stiction limit-cycle: tiny errors command omegas the drivetrain cannot
+    // execute, so inside the deadband hold still instead of wiggling.
+    if (Math.abs(goalErrorRad()) < ShootingConstants.AIM_ERROR_DEADBAND_RAD) {
+      omega = 0.0;
+    }
     Drive.mInstance.runVelocity(
         ChassisSpeeds.fromFieldRelativeSpeeds(
             new ChassisSpeeds(0.0, 0.0, omega), Drive.mInstance.getRotation()));
-    Logger.recordOutput("Shooging/aimError", angleController.getPositionError());
+    Logger.recordOutput("Shooging/aimAngleRad", currentAngleRad);
+    Logger.recordOutput("Shooging/aimSetpointRad", targetAngleRad);
+    Logger.recordOutput("Shooging/aimProfilePositionRad", angleController.getSetpoint().position);
+    Logger.recordOutput("Shooging/aimProfileVelRadPerSec", angleController.getSetpoint().velocity);
+    Logger.recordOutput("Shooging/aimError", goalErrorRad());
+    Logger.recordOutput("Shooging/aimOmegaRadPerSec", omega);
   }
 
   /** Drive the flywheel and hood to the interpolated setpoints for the current distance. */
@@ -110,10 +149,9 @@ public class Shooting extends Command {
     boolean hoodReady =
         Math.abs(Hood.mInstance.getPositionRot() - targetHoodRot)
             < ShootingConstants.HOOD_ANGLE_TOLERANCE_ROT;
-    boolean aimReady =
-        Math.abs(angleController.getError() - targetHoodRot)
-            < ShootingConstants.AIM_ANGLE_TOLERANCE_RAD;
-    ;
+    // Compare against the HUB goal, not angleController's error: the profiled controller's
+    // error is measured against the moving profile setpoint and is near zero mid-turn.
+    boolean aimReady = Math.abs(goalErrorRad()) < ShootingConstants.AIM_ANGLE_TOLERANCE_RAD;
     Logger.recordOutput("Shooging/aimReady", aimReady);
     Logger.recordOutput("Shooging/hoodReady", hoodReady);
     Logger.recordOutput("Shooging/drumReady", drumReady);
@@ -128,7 +166,7 @@ public class Shooting extends Command {
     Indexer.mInstance.setV(0);
     Feeder.mInstance.setV(0);
 
-    if (isReadyToShoot()) {
+    if (readyDebouncer.calculate(isReadyToShoot())) {
       state = States.SHOOT;
     }
   }
@@ -192,9 +230,7 @@ public class Shooting extends Command {
   @Override
   public void end(boolean interrupted) {
     Drum.mInstance.setVelocityRotPerSec(DrumConstants.StowVelocity);
-    ;
     Hood.mInstance.setPositionRot(0);
-    ;
     IntakeRoller.mInstance.stop();
     IntakeDeploy.mInstance.setPositionCentimeter(IntakeDeployConstants.IntakeOutPosition);
     Indexer.mInstance.stop();
