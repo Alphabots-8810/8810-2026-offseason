@@ -13,6 +13,7 @@ import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
+import frc.robot.commands.AutoCommands.AutoCommands;
 import frc.robot.commands.AutoalignIntakeCommand.AutoalignIntake;
 import frc.robot.commands.DriveCommands.CornerPivotCommand;
 import frc.robot.commands.DriveCommands.CornerPivotCommand.PivotCorner;
@@ -146,6 +147,7 @@ public class RobotContainer {
 
     // Set up auto routines
     autoChooser = new LoggedDashboardChooser<>("Auto Choices", AutoBuilder.buildAutoChooser());
+    autoChooser.addOption("Left Three-Piece", AutoCommands.leftThreePieceAuto());
 
     // Set up SysId routines
     autoChooser.addOption(
@@ -266,6 +268,20 @@ public class RobotContainer {
     controller
         .a()
         .whileTrue(new Shooting(true, () -> -controller.getLeftY(), () -> -controller.getLeftX()));
+
+    // Sim-only: Start button clears every ball on the field and resets the robot pose / intake
+    // stock. Ignored entirely on a real robot so the binding can stay in the code.
+    controller
+        .start()
+        .onTrue(
+            Commands.runOnce(
+                    () -> {
+                      if (Constants.currentMode == Constants.Mode.SIM
+                          && MapleSimArena.getInstance() != null) {
+                        MapleSimArena.getInstance().resetField();
+                      }
+                    })
+                .ignoringDisable(true));
   }
 
   /** True when the robot is on its alliance side of the HUB. */

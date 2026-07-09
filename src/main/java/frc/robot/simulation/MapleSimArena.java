@@ -28,6 +28,10 @@ import org.littletonrobotics.junction.Logger;
  */
 public final class MapleSimArena {
   private static final boolean EFFICIENCY_MODE = true;
+  // 2026 field "bump": the sloped ramps next to the trenches around the hub. In maple-sim they
+  // can't be partially driven, so either add them as full 47x217" colliders (true -> robot bounces
+  // off the ramps) or only the 47x47" hub center (false -> robot can drive through the ramps).
+  private static final boolean ADD_RAMP_COLLIDER = false;
   private static final Pose2d INITIAL_POSE = new Pose2d(1.5, 4.0, Rotation2d.kZero);
 
   // Arena2026Rebuilt field extents. maple-sim 0.4.0-beta FieldMirroringUtils still uses the
@@ -44,7 +48,7 @@ public final class MapleSimArena {
     // Must run after RebuiltHub class init (static redShootPoses) and before scoring.
     patchRedHubRecyclePoses();
 
-    arena = new Arena2026Rebuilt();
+    arena = new Arena2026Rebuilt(ADD_RAMP_COLLIDER);
     arena.setEfficiencyMode(EFFICIENCY_MODE);
     SimulatedArena.overrideInstance(arena);
 
