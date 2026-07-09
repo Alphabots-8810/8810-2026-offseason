@@ -45,12 +45,7 @@ import frc.robot.Constants.Mode;
 import frc.robot.FieldLayout;
 import frc.robot.commands.FerryCommand.FerryConstants;
 import frc.robot.generated.TunerConstants;
-<<<<<<< Updated upstream
 import frc.robot.simulation.MapleSimArena;
-import frc.robot.util.LimelightHelpers;
-=======
-import frc.robot.simulation.MapleSimWorld;
->>>>>>> Stashed changes
 import frc.robot.util.LocalADStarAK;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -186,7 +181,6 @@ public class Drive extends SubsystemBase {
     // Update odometry
     if (Constants.currentMode != Mode.SIM) {
       updateOdometry();
-      updatePoseWithLimelightMegaTag2("limelight");
     }
 
     // Update gyro alert
@@ -372,11 +366,17 @@ public class Drive extends SubsystemBase {
     return getPose().getRotation();
   }
 
-  /** Resets the current odometry pose. */
+  /**
+   * Resets the current odometry pose. Keeps rawGyroRotation untouched so the pose estimator records
+   * the offset between the physical gyro reading and the new heading; overwriting it would zero the
+   * offset and let the next raw gyro sample revert the reset.
+   */
   public void setPose(Pose2d pose) {
-    rawGyroRotation = pose.getRotation();
     poseEstimator.resetPosition(rawGyroRotation, getModulePositions(), pose);
-    MapleSimArena.getInstance().setRobotPose(pose);
+    if (Constants.currentMode == Mode.SIM) {
+      rawGyroRotation = pose.getRotation();
+      MapleSimArena.getInstance().setRobotPose(pose);
+    }
   }
 
   private void updateOdometry() {
