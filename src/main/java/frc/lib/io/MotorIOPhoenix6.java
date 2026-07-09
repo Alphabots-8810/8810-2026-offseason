@@ -21,6 +21,7 @@ import com.ctre.phoenix6.controls.MotionMagicTorqueCurrentFOC;
 import com.ctre.phoenix6.controls.MotionMagicVoltage;
 import com.ctre.phoenix6.controls.PositionTorqueCurrentFOC;
 import com.ctre.phoenix6.controls.PositionVoltage;
+import com.ctre.phoenix6.controls.TorqueCurrentFOC;
 import com.ctre.phoenix6.controls.VelocityTorqueCurrentFOC;
 import com.ctre.phoenix6.controls.VelocityVoltage;
 import com.ctre.phoenix6.controls.VoltageOut;
@@ -181,6 +182,7 @@ public class MotorIOPhoenix6 implements MotorIO {
   private final List<TalonFX> followers = new ArrayList<>();
 
   private final VoltageOut voltageRequest = new VoltageOut(0.0);
+  private final TorqueCurrentFOC currentRequest = new TorqueCurrentFOC(0.0);
   private final VelocityVoltage velocityVoltageRequest = new VelocityVoltage(0.0);
   private final VelocityTorqueCurrentFOC velocityTorqueCurrentRequest =
       new VelocityTorqueCurrentFOC(0.0);
@@ -206,6 +208,7 @@ public class MotorIOPhoenix6 implements MotorIO {
 
   private ControlMode controlMode = ControlMode.DISABLED;
   private double voltageSetpoint = 0.0;
+  private double currentSetpoint = 0.0;
   private double velocitySetpointRadPerSec = 0.0;
   private double positionSetpointRad = 0.0;
 
@@ -302,6 +305,15 @@ public class MotorIOPhoenix6 implements MotorIO {
     velocitySetpointRadPerSec = 0.0;
     positionSetpointRad = 0.0;
     talon.setControl(voltageRequest.withOutput(volts));
+  }
+
+  @Override
+  public void setCurrent(double current) {
+    controlMode = ControlMode.CURRENT;
+    currentSetpoint = current;
+    velocitySetpointRadPerSec = 0.0;
+    positionSetpointRad = 0.0;
+    talon.setControl(currentRequest.withOutput(current));
   }
 
   @Override

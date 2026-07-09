@@ -109,7 +109,7 @@ public final class ShootingConstants {
   // 1.05 reproduces the two field-measured points (2.118 m -> 49.5 and 2.54 m -> 51.08
   // motor rot/s, ratios 1.054 and 1.044 vs the sim).
   public static final LoggedTunableNumber kSpeedTunable =
-      new LoggedTunableNumber("Shooting/kSpeed", 1.05);
+      new LoggedTunableNumber("Shooting/kSpeed", 1.08);
 
   /** Sim-predicted drum command (motor rot/s, before kSpeed) for a robot-center distance (m). */
   public static double simDrumRotps(double distanceMeters) {

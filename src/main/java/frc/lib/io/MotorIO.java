@@ -14,7 +14,8 @@ public interface MotorIO {
     DISABLED,
     VOLTAGE,
     VELOCITY,
-    POSITION
+    POSITION,
+    CURRENT
   }
 
   @AutoLog
@@ -38,6 +39,8 @@ public interface MotorIO {
 
   /** Runs the motor at the specified voltage. */
   public default void setVoltage(double volts) {}
+
+  public default void setCurrent(double current) {}
 
   /** Runs the motor at the specified velocity in radians per second. */
   public default void setVelocity(double velocityRadPerSec) {}

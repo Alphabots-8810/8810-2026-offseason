@@ -36,6 +36,7 @@ public class Shooting extends Command {
   // Times the delay between the long-range CANrange reading and retracting the intake.
   private final Timer retractTimer = new Timer();
   private boolean retractTimerStarted;
+  private boolean isEnergySave;
 
   // Profiled heading controller: the trapezoid profile plans the turn (velocity is fed
   // forward), the PID only corrects tracking error against the moving profile setpoint.
@@ -51,7 +52,7 @@ public class Shooting extends Command {
   // Requires isReadyToShoot() to hold continuously before AIM -> SHOOT (recreated in initialize).
   private Debouncer readyDebouncer;
 
-  public Shooting() {
+  public Shooting(boolean isEnergySave) {
     addRequirements(
         Drive.mInstance,
         Drum.mInstance,
@@ -60,6 +61,7 @@ public class Shooting extends Command {
         Indexer.mInstance,
         IntakeDeploy.mInstance,
         IntakeRoller.mInstance);
+    this.isEnergySave = isEnergySave;
     angleController.enableContinuousInput(-Math.PI, Math.PI);
     // angleController.setTolerance(ShootingConstants.AIM_ANGLE_TOLERANCE_RAD);
   }
@@ -186,14 +188,28 @@ public class Shooting extends Command {
 
   /** Drive the full feed path (intake roller, indexer, feeder) at the tuned shooting speeds. */
   private void runFeed() {
-    if (IntakeDeploy.mInstance.getPositionCentimeter() <= 30) {
-      IntakeRoller.mInstance.setVelocityRotPerSec(0);
+    if (!isEnergySave) {
+      if (IntakeDeploy.mInstance.getPositionCentimeter() <= 30) {
+        IntakeRoller.mInstance.setVelocityRotPerSec(0);
+      } else {
+        IntakeRoller.mInstance.setVelocityRotPerSec(
+            ShootingConstants.IntakeRollerRotpsTunable.getAsDouble());
+      }
+      Indexer.mInstance.setVelocityRotPerSec(ShootingConstants.IndexerRotpsTunable.getAsDouble());
+      Feeder.mInstance.setVelocityRotPerSec(ShootingConstants.FeederRotpsTunable.getAsDouble());
     } else {
-      IntakeRoller.mInstance.setVelocityRotPerSec(
-          ShootingConstants.IntakeRollerRotpsTunable.getAsDouble());
+      if (IntakeDeploy.mInstance.getPositionCentimeter() <= 30) {
+        IntakeRoller.mInstance.setVelocityRotPerSec(0);
+      } else {
+        IntakeRoller.mInstance.setVelocityRotPerSec(
+            ShootingConstants.IntakeRollerRotpsTunable.getAsDouble());
+      }
+      // Indexer.mInstance。;
+      Indexer.mInstance.setCurrent(50);
+      ;
+      Feeder.mInstance.setCurrent(50);
+      ;
     }
-    Indexer.mInstance.setVelocityRotPerSec(ShootingConstants.IndexerRotpsTunable.getAsDouble());
-    Feeder.mInstance.setVelocityRotPerSec(ShootingConstants.FeederRotpsTunable.getAsDouble());
   }
 
   private boolean canRange() {
