@@ -40,6 +40,7 @@ import frc.robot.subsystems.drive.GyroIOSim;
 import frc.robot.subsystems.drive.ModuleIO;
 import frc.robot.subsystems.drive.ModuleIOSim;
 import frc.robot.subsystems.drive.ModuleIOTalonFX;
+import frc.robot.subsystems.vision.Cameras;
 import frc.robot.util.LoggedTunableNumber;
 import java.util.Set;
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
@@ -65,6 +66,9 @@ public class RobotContainer {
   private final IntakeDeploy intakeDeploy = IntakeDeploy.mInstance;
   private final IntakeRoller intakeRoller = IntakeRoller.mInstance;
   private final LoggedTunableNumber retract = new LoggedTunableNumber("retract", 25);
+
+  // Created after the drive in the constructor because its cameras read the drive pose
+  private Cameras cameras = Cameras.mInstance;
 
   // Controller
   private final CommandXboxController controller = new CommandXboxController(0);
@@ -135,6 +139,10 @@ public class RobotContainer {
         break;
     }
     Drive.mInstance = drive;
+
+    // Initialize the camera subsystem after Drive.mInstance is set, since its
+    // periodic reads the drive pose
+    cameras = Cameras.mInstance;
 
     // Set up auto routines
     autoChooser = new LoggedDashboardChooser<>("Auto Choices", AutoBuilder.buildAutoChooser());

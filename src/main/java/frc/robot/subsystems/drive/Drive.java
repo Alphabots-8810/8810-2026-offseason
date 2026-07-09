@@ -20,7 +20,6 @@ import edu.wpi.first.hal.FRCNetComm.tInstances;
 import edu.wpi.first.hal.FRCNetComm.tResourceType;
 import edu.wpi.first.hal.HAL;
 import edu.wpi.first.math.Matrix;
-import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -46,8 +45,12 @@ import frc.robot.Constants.Mode;
 import frc.robot.FieldLayout;
 import frc.robot.commands.FerryCommand.FerryConstants;
 import frc.robot.generated.TunerConstants;
+<<<<<<< Updated upstream
 import frc.robot.simulation.MapleSimArena;
 import frc.robot.util.LimelightHelpers;
+=======
+import frc.robot.simulation.MapleSimWorld;
+>>>>>>> Stashed changes
 import frc.robot.util.LocalADStarAK;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -416,44 +419,6 @@ public class Drive extends SubsystemBase {
   public void setPoseFromSimulation(Pose2d pose) {
     rawGyroRotation = pose.getRotation();
     poseEstimator.resetPosition(rawGyroRotation, getModulePositions(), pose);
-  }
-
-  private void updatePoseWithLimelightMegaTag2(String llName) {
-    var speeds = getChassisSpeeds();
-
-    LimelightHelpers.SetRobotOrientation(
-        llName,
-        getRotation().getDegrees(),
-        Math.toDegrees(speeds.omegaRadiansPerSecond),
-        0.0,
-        0.0,
-        0.0,
-        0.0);
-
-    LimelightHelpers.PoseEstimate est =
-        LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2(llName);
-
-    if (est == null
-        || est.tagCount <= 0
-        || Math.hypot(speeds.vxMetersPerSecond, speeds.vyMetersPerSecond) > 2.0
-        || Math.abs(speeds.omegaRadiansPerSecond) > 3.0) {
-      return;
-    }
-
-    double ta = LimelightHelpers.getTA(llName);
-    double xyStdDev = Constants.VisionConstants.taToXYStdDevMeters.get(Math.max(0.0, ta));
-
-    Pose2d visionPose = new Pose2d(est.pose.getTranslation(), getRotation());
-
-    poseEstimator.addVisionMeasurement(
-        visionPose,
-        est.timestampSeconds,
-        VecBuilder.fill(xyStdDev, xyStdDev, Constants.VisionConstants.thetaStdDevRad));
-
-    Logger.recordOutput("Vision/" + llName + "/TagCount", est.tagCount);
-    Logger.recordOutput("Vision/" + llName + "/TA", ta);
-    Logger.recordOutput("Vision/" + llName + "/XYStdDev", xyStdDev);
-    Logger.recordOutput("Vision/" + llName + "/Pose", visionPose);
   }
 
   /** Adds a new timestamped vision measurement. */
