@@ -226,7 +226,7 @@ public class RobotContainer {
     //             IntakeDeploy.mInstance,
     //             IntakeRoller.mInstance));
     controller.x().whileTrue(new Manual());
-    controller.rightBumper().whileTrue(new Shooting());
+    controller.rightBumper().whileTrue(new Shooting(true));
     controller
         .rightTrigger()
         .onTrue(
@@ -260,6 +260,7 @@ public class RobotContainer {
                 () -> -controller.getLeftY(),
                 () -> -controller.getLeftX(),
                 () -> -controller.getRightX()));
+    controller.x().whileTrue(new Shooting(true));
 
     controller.a().whileTrue(new Ferry());
     // controller.rightTrigger().whileTrue(new Shooting());

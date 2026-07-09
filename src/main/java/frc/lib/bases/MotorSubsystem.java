@@ -40,6 +40,10 @@ public class MotorSubsystem extends SubsystemBase {
     disconnectedAlert.set(!inputs.connected);
   }
 
+  public void setCurrent(double torqueCurrent) {
+    io.setCurrent(torqueCurrent);
+  }
+
   public double getPositionRot() {
     return inputs.positionRad / (2.0 * Math.PI);
   }

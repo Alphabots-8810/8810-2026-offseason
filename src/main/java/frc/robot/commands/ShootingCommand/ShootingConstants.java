@@ -1,5 +1,6 @@
 package frc.robot.commands.ShootingCommand;
 
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.interpolation.InterpolatingDoubleTreeMap;
 import edu.wpi.first.math.util.Units;
 import frc.robot.util.LoggedTunableNumber;
@@ -12,6 +13,8 @@ public final class ShootingConstants {
       new LoggedTunableNumber("Shooting/IntakeRollerRotps", 40);
   public static final LoggedTunableNumber FeederRotpsTunable =
       new LoggedTunableNumber("Shooting/FeederRotps", 80);
+  public static final LoggedTunableNumber ShooterOffset =
+      new LoggedTunableNumber("Shooting/ShooterOffset", 1.1);
 
   // Readiness tolerances used to decide when AIM is satisfied and we may shoot.
   public static final double SHOOTER_VELOCITY_TOLERANCE_ROTPS = 1.;
@@ -59,37 +62,85 @@ public final class ShootingConstants {
   public static final InterpolatingDoubleTreeMap distanceToFeedVelo =
       new InterpolatingDoubleTreeMap();
 
-  static {
-    // PLACEHOLDER TABLE - tune on the real field. Only 2.118 m and 2.540 m are measured;
-    // the rest are interpolated/extrapolated guesses so the maps cover the full range.
-    // Both maps must stay monotonic in distance.
-    /*
-     * 2.118 0 47.5
-     * 2.54  5  49.08
-     * 3.05  12 51.08
-     * 3.53 16 53.26
-     * 4.15 20.5 56.
-     * 4.55 23 58
-     * 5.06 25 61
-     *
-     */
-    distanceToShooterRotps.put(2.118, 49.5);
-    distanceToShooterRotps.put(2.54, 51.08);
-    distanceToShooterRotps.put(3.05, 53.6);
-    distanceToShooterRotps.put(3.53, 55.26);
-    distanceToShooterRotps.put(4.15, 58.);
-    distanceToShooterRotps.put(4.55, 61.2);
-    distanceToShooterRotps.put(5.06, 64.2);
-    distanceToHoodDeg.put(2.118, 0.);
-    distanceToHoodDeg.put(2.54, 5.);
-    distanceToHoodDeg.put(3.05, 12.);
-    distanceToHoodDeg.put(3.53, 16.);
-    distanceToHoodDeg.put(4.15, 20.5);
-    distanceToHoodDeg.put(4.55, 23.);
-    distanceToHoodDeg.put(5.06, 25.);
-    // distance(m) -> shooter (rot/s)
+  // Alpha Sim V3.1 projectile fit (projectile sim/AlphaSim-main/handoff/lookup_polynomial.json,
+  // regenerated 2026-07-08 at the measured 0.4935 m exit height):
+  // launch elevation above the horizon (deg) = A*d^2 + B*d + C, d in meters, fit RMSE 0.11 deg.
+  // Only valid on [1.5, 5.0] m — the fit is U-shaped and turns back up outside, so clamp.
+  private static final double SIM_HOOD_A = 0.886320;
+  private static final double SIM_HOOD_B = -10.544026;
+  private static final double SIM_HOOD_C = 86.479696;
+  private static final double SIM_DISTANCE_MIN_M = 1.5;
+  private static final double SIM_DISTANCE_MAX_M = 5.0;
 
-    // distance(m) -> hood (deg)
+  // The hood mechanism zero is not horizontal: hood at 0 deg launches 78.2 deg above the
+  // horizon, and increasing the hood angle flattens the shot.
+  public static final double HOOD_ZERO_ELEVATION_DEG = 78.2;
+
+  // The polynomial's distance is measured from the ball's EXIT POINT, which sits this far
+  // in front of robot center (measured 2026-07-08). The robot aims straight at the HUB
+  // while shooting, so the exit point is simply this much closer along the aim line.
+  public static final double EXIT_FORWARD_OFFSET_M = 0.17641;
+
+  /** Sim-predicted hood mechanism angle (deg) for a robot-center distance to the HUB (m). */
+  public static double simHoodDeg(double distanceMeters) {
+    double d =
+        MathUtil.clamp(
+            distanceMeters - EXIT_FORWARD_OFFSET_M, SIM_DISTANCE_MIN_M, SIM_DISTANCE_MAX_M);
+    double elevationDeg = SIM_HOOD_A * d * d + SIM_HOOD_B * d + SIM_HOOD_C;
+    return HOOD_ZERO_ELEVATION_DEG - elevationDeg;
+  }
+
+  // Same sim fit for the flywheel: SURFACE (rim) linear speed in m/s, with the 0.18
+  // wheel-ball slip already included, on the same clamped exit-point distance.
+  private static final double SIM_FLYWHEEL_A = 0.016406;
+  private static final double SIM_FLYWHEEL_B = 0.714772;
+  private static final double SIM_FLYWHEEL_C = 6.420549;
+
+  // Drum geometry: 80 mm wheels, 20T motor pinion driving a 30T drum pulley. The drum's
+  // rotor-to-mechanism ratio is configured as 1.0, so setVelocityRotPerSec commands MOTOR
+  // rot/s: one motor rotation moves the wheel surface pi * 0.080 * (20/30) = 0.16755 m.
+  public static final double DRUM_WHEEL_DIAMETER_M = 0.080;
+  public static final double DRUM_MOTOR_TO_WHEEL_RATIO = 20.0 / 30.0;
+  public static final double DRUM_SURFACE_M_PER_MOTOR_ROT =
+      Math.PI * DRUM_WHEEL_DIAMETER_M * DRUM_MOTOR_TO_WHEEL_RATIO;
+
+  // THE field-calibration knob from the sim handoff, applied to the drum speed at use time
+  // (not baked into the table): balls landing SHORT -> raise, LONG -> lower. 1.0 = raw sim;
+  // 1.05 reproduces the two field-measured points (2.118 m -> 49.5 and 2.54 m -> 51.08
+  // motor rot/s, ratios 1.054 and 1.044 vs the sim).
+  public static final LoggedTunableNumber kSpeedTunable =
+      new LoggedTunableNumber("Shooting/kSpeed", 1.08);
+
+  /** Sim-predicted drum command (motor rot/s, before kSpeed) for a robot-center distance (m). */
+  public static double simDrumRotps(double distanceMeters) {
+    double d =
+        MathUtil.clamp(
+            distanceMeters - EXIT_FORWARD_OFFSET_M, SIM_DISTANCE_MIN_M, SIM_DISTANCE_MAX_M);
+    double surfaceMps = SIM_FLYWHEEL_A * d * d + SIM_FLYWHEEL_B * d + SIM_FLYWHEEL_C;
+    return surfaceMps / DRUM_SURFACE_M_PER_MOTOR_ROT;
+  }
+
+  static {
+    // Both maps hold raw sim values (kSpeed = 1) at the same distance keys; Shooting
+    // multiplies the drum speed by Shooting/kSpeed at use time. Keys are robot-center
+    // distances; simDrumRotps/simHoodDeg subtract the exit offset internally.
+    distanceToShooterRotps.put(2.118, simDrumRotps(2.118)); // 46.97
+    distanceToShooterRotps.put(2.54, simDrumRotps(2.54)); // 48.95
+    distanceToShooterRotps.put(3.05, simDrumRotps(3.05)); // 51.39
+    distanceToShooterRotps.put(3.53, simDrumRotps(3.53)); // 53.73
+    distanceToShooterRotps.put(4.15, simDrumRotps(4.15)); // 56.82
+    distanceToShooterRotps.put(4.55, simDrumRotps(4.55)); // 58.85
+    distanceToShooterRotps.put(5.06, simDrumRotps(5.06)); // 61.49
+    // Hood angles come from simHoodDeg() above (Alpha Sim polynomial converted to the
+    // mechanism frame). Kept as a table so individual points can still be nudged on the
+    // field; compare against the logged "Shooging/simHoodDeg" to see any hand edits.
+    distanceToHoodDeg.put(2.118, simHoodDeg(2.118)); // 8.85
+    distanceToHoodDeg.put(2.54, simHoodDeg(2.54)); // 11.69
+    distanceToHoodDeg.put(3.05, simHoodDeg(3.05)); // 14.70
+    distanceToHoodDeg.put(3.53, simHoodDeg(3.53)); // 17.11
+    distanceToHoodDeg.put(4.15, simHoodDeg(4.15)); // 19.62
+    distanceToHoodDeg.put(4.55, simHoodDeg(4.55)); // 20.88
+    distanceToHoodDeg.put(5.06, simHoodDeg(5.06)); // 22.07
 
     distanceToFeedVelo.put(2., 100.);
     distanceToFeedVelo.put(4., 100.);
