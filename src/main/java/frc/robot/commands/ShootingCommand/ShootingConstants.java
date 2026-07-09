@@ -25,6 +25,12 @@ public final class ShootingConstants {
   // so a single lucky velocity sample inside the tolerance band cannot start the volley.
   public static final double READY_DEBOUNCE_SEC = 0.15;
 
+  // Left-stick deadband for repositioning during AIM. Matches teleop drive deadband.
+  public static final double DRIVE_DEADBAND = 0.03;
+
+  // Chassis must be below this measured linear speed (m/s) to count as stopped for shooting.
+  public static final double CHASSIS_STOP_VELOCITY_MPS = 0.08;
+
   // Inside this heading error the omega command is zeroed. Errors this small produce omega
   // commands below what the swerve can execute; static friction turns them into a ~5 Hz
   // limit-cycle wiggle. 1 deg of heading is ~9 cm lateral at 5 m, well inside the HUB.
@@ -81,6 +87,19 @@ public final class ShootingConstants {
   // while shooting, so the exit point is simply this much closer along the aim line.
   public static final double EXIT_FORWARD_OFFSET_M = 0.17641;
 
+  // Measured exit height used by Alpha Sim V3.1 and maple-sim projectile launch.
+  public static final double EXIT_HEIGHT_M = 0.4935;
+
+  // Feeder wheel diameter (m); perimeter comment in static block uses 120 mm.
+  public static final double FEEDER_WHEEL_DIAMETER_M = 0.120 / Math.PI;
+
+  /** Feeder surface travel per motor rotation (m). */
+  public static final double FEEDER_SURFACE_M_PER_MOTOR_ROT = Math.PI * FEEDER_WHEEL_DIAMETER_M;
+
+  // Approximate spacing between balls in the feed path (m); one feeder revolution is a
+  // reasonable first guess for sim launch cadence.
+  public static final double FEED_BALL_SPACING_M = 0.120;
+
   /** Sim-predicted hood mechanism angle (deg) for a robot-center distance to the HUB (m). */
   public static double simHoodDeg(double distanceMeters) {
     double d =
@@ -110,6 +129,15 @@ public final class ShootingConstants {
   // motor rot/s, ratios 1.054 and 1.044 vs the sim).
   public static final LoggedTunableNumber kSpeedTunable =
       new LoggedTunableNumber("Shooting/kSpeed", 1.08);
+
+  // Maple-sim projectile: launch speed (m/s) = drum target rot/s × this constant.
+  public static final LoggedTunableNumber SimLaunchSpeedPerDrumRotps =
+      new LoggedTunableNumber("Shooting/SimLaunchSpeedPerDrumRotps", 0.12);
+
+  // Maple-sim projectile: launch elevation (deg) = 90° − hood target (deg) − this offset.
+  // Default offset (90 − 78.2 = 11.8) reproduces hood=0 → 78.2° elevation from measurement.
+  public static final LoggedTunableNumber SimLaunchAngleOffsetDeg =
+      new LoggedTunableNumber("Shooting/SimLaunchAngleOffsetDeg", 90.0 - HOOD_ZERO_ELEVATION_DEG);
 
   /** Sim-predicted drum command (motor rot/s, before kSpeed) for a robot-center distance (m). */
   public static double simDrumRotps(double distanceMeters) {

@@ -22,6 +22,7 @@ public class MotorIOSim implements MotorIO {
     public double velocityKd = 0.0;
     public double positionKp = 4.0;
     public double positionKd = 0.0;
+    public boolean instantSetpoint = false;
 
     public MotorIOSimConfig withGearbox(DCMotor gearbox) {
       this.gearbox = gearbox;
@@ -49,11 +50,18 @@ public class MotorIOSim implements MotorIO {
       positionKd = kD;
       return this;
     }
+
+    /** Snaps measured state to the active setpoint each loop instead of running plant physics. */
+    public MotorIOSimConfig withInstantSetpoint(boolean instantSetpoint) {
+      this.instantSetpoint = instantSetpoint;
+      return this;
+    }
   }
 
   private final DCMotorSim sim;
   private final PIDController velocityController;
   private final PIDController positionController;
+  private final boolean instantSetpoint;
 
   private boolean velocityClosedLoop = false;
   private boolean positionClosedLoop = false;
@@ -72,24 +80,41 @@ public class MotorIOSim implements MotorIO {
             config.gearbox);
     velocityController = new PIDController(config.velocityKp, 0.0, config.velocityKd);
     positionController = new PIDController(config.positionKp, 0.0, config.positionKd);
+    instantSetpoint = config.instantSetpoint;
   }
 
   @Override
   public void updateInputs(MotorIOInputs inputs) {
-    if (velocityClosedLoop) {
-      appliedVolts = velocityController.calculate(sim.getAngularVelocityRadPerSec());
+    if (instantSetpoint) {
+      if (velocityClosedLoop) {
+        sim.setState(sim.getAngularPositionRad(), velocitySetpointRadPerSec);
+        appliedVolts = 0.0;
+      } else if (positionClosedLoop) {
+        sim.setState(positionSetpointRad, 0.0);
+        appliedVolts = 0.0;
+      } else if (controlMode == ControlMode.VOLTAGE) {
+        sim.setState(sim.getAngularPositionRad(), 0.0);
+        appliedVolts = voltageSetpoint;
+      } else {
+        sim.setState(sim.getAngularPositionRad(), 0.0);
+        appliedVolts = 0.0;
+      }
     } else {
-      velocityController.reset();
-    }
+      if (velocityClosedLoop) {
+        appliedVolts = velocityController.calculate(sim.getAngularVelocityRadPerSec());
+      } else {
+        velocityController.reset();
+      }
 
-    if (positionClosedLoop) {
-      appliedVolts = positionController.calculate(sim.getAngularPositionRad());
-    } else {
-      positionController.reset();
-    }
+      if (positionClosedLoop) {
+        appliedVolts = positionController.calculate(sim.getAngularPositionRad());
+      } else {
+        positionController.reset();
+      }
 
-    sim.setInputVoltage(MathUtil.clamp(appliedVolts, -12.0, 12.0));
-    sim.update(0.02);
+      sim.setInputVoltage(MathUtil.clamp(appliedVolts, -12.0, 12.0));
+      sim.update(0.02);
+    }
 
     inputs.connected = true;
     inputs.positionRad = sim.getAngularPositionRad();

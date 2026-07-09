@@ -9,7 +9,8 @@ package frc.robot;
 
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
-import frc.robot.simulation.MapleSimWorld;
+import frc.robot.simulation.FuelSimulation;
+import frc.robot.simulation.MapleSimArena;
 import org.littletonrobotics.junction.LogFileUtil;
 import org.littletonrobotics.junction.LoggedRobot;
 import org.littletonrobotics.junction.Logger;
@@ -144,7 +145,7 @@ public class Robot extends LoggedRobot {
   @Override
   public void simulationInit() {
     if (Constants.currentMode == Constants.Mode.SIM) {
-      MapleSimWorld.getInstance().resetField();
+      MapleSimArena.getInstance().resetField();
     }
   }
 
@@ -152,7 +153,11 @@ public class Robot extends LoggedRobot {
   @Override
   public void simulationPeriodic() {
     if (Constants.currentMode == Constants.Mode.SIM) {
-      MapleSimWorld.getInstance().simulationPeriodic();
+      MapleSimArena.getInstance().simulationPeriodic();
+      FuelSimulation fuelSimulation = FuelSimulation.getInstance();
+      if (fuelSimulation != null) {
+        fuelSimulation.simulationPeriodic();
+      }
     }
   }
 }

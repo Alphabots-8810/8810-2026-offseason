@@ -24,7 +24,8 @@ import frc.robot.commands.IntakeDeployOutwardZeroCommand.IntakeDeployOutwardZero
 import frc.robot.commands.ManualCommand.Manual;
 import frc.robot.commands.ShootingCommand.Shooting;
 import frc.robot.generated.TunerConstants;
-import frc.robot.simulation.MapleSimWorld;
+import frc.robot.simulation.FuelSimulation;
+import frc.robot.simulation.MapleSimArena;
 import frc.robot.subsystems.Drum.Drum;
 import frc.robot.subsystems.FeedPath.FeedPath;
 import frc.robot.subsystems.Feeder.Feeder;
@@ -40,6 +41,7 @@ import frc.robot.subsystems.drive.ModuleIO;
 import frc.robot.subsystems.drive.ModuleIOSim;
 import frc.robot.subsystems.drive.ModuleIOTalonFX;
 import frc.robot.util.LoggedTunableNumber;
+import java.util.Set;
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
 
 /**
@@ -106,9 +108,9 @@ public class RobotContainer {
         break;
 
       case SIM:
-        // Sim robot, instantiate MapleSim physics-backed IO implementations
-        MapleSimWorld mapleSimWorld = MapleSimWorld.getInstance();
-        var driveSimulation = mapleSimWorld.getDriveSimulation();
+        // Sim robot: maple-sim arena + AdvantageKit drive IO (official hardware-abstraction path)
+        var driveSimulation = MapleSimArena.getInstance().getDriveSimulation();
+        FuelSimulation.configure(driveSimulation);
         drive =
             new Drive(
                 new GyroIOSim(driveSimulation.getGyroSimulation()),
@@ -117,7 +119,7 @@ public class RobotContainer {
                 new ModuleIOSim(driveSimulation.getModules()[2]),
                 new ModuleIOSim(driveSimulation.getModules()[3]));
         Drive.mInstance = drive;
-        drive.setPose(mapleSimWorld.getRobotPose());
+        drive.setPose(MapleSimArena.getInstance().getRobotPose());
         break;
 
       default:
@@ -226,7 +228,6 @@ public class RobotContainer {
     //             IntakeDeploy.mInstance,
     //             IntakeRoller.mInstance));
     controller.x().whileTrue(new Manual());
-    controller.rightBumper().whileTrue(new Shooting(true));
     controller
         .rightTrigger()
         .onTrue(
@@ -245,13 +246,7 @@ public class RobotContainer {
                 }));
 
     controller.y().onTrue(new HoodZeroCommand().alongWith(new IntakeDeployOutwardZeroCommand()));
-    controller
-        .rightStick()
-        .onTrue(
-            new AutoalignIntake(
-                () -> -controller.getLeftY(),
-                () -> -controller.getLeftX(),
-                () -> -controller.getRightX()));
+    controller.rightBumper().whileTrue(shootOrFerryCommand());
     controller.leftTrigger(0.1).whileTrue(new IntakeCommand());
     controller
         .leftBumper()
@@ -260,10 +255,27 @@ public class RobotContainer {
                 () -> -controller.getLeftY(),
                 () -> -controller.getLeftX(),
                 () -> -controller.getRightX()));
-    controller.x().whileTrue(new Shooting(true));
+    controller
+        .a()
+        .whileTrue(new Shooting(true, () -> -controller.getLeftY(), () -> -controller.getLeftX()));
+  }
 
-    controller.a().whileTrue(new Ferry());
-    // controller.rightTrigger().whileTrue(new Shooting());
+  /** True when the robot is on its alliance side of the HUB. */
+  private boolean isInAllianceArea() {
+    boolean isRed =
+        DriverStation.getAlliance().isPresent()
+            && DriverStation.getAlliance().get() == Alliance.Red;
+    return FieldLayout.isPoseInAllianceArea(isRed, drive.getPose());
+  }
+
+  /** Alliance side of the HUB: shoot at the HUB; neutral side: ferry. */
+  private Command shootOrFerryCommand() {
+    return Commands.defer(
+        () ->
+            isInAllianceArea()
+                ? new Shooting(false, () -> -controller.getLeftY(), () -> -controller.getLeftX())
+                : new Ferry(),
+        Set.of(drive, drum, feeder, hood, indexer, intakeDeploy, intakeRoller));
   }
 
   /**

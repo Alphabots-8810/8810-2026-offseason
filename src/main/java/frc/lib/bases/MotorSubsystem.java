@@ -52,6 +52,14 @@ public class MotorSubsystem extends SubsystemBase {
     return inputs.velocityRadPerSec / (2.0 * Math.PI);
   }
 
+  public double getVelocitySetpointRotPerSec() {
+    return inputs.velocitySetpointRadPerSec / (2.0 * Math.PI);
+  }
+
+  public double getPositionSetpointRot() {
+    return inputs.positionSetpointRad / (2.0 * Math.PI);
+  }
+
   public double getStatorCurrentAmps() {
     return inputs.statorCurrentAmps;
   }
