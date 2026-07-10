@@ -8,14 +8,15 @@ public final class AutopilotTrenchCommandConstants {
   public static final double MAX_JERK_METERS_PER_SEC_CUBED = 16.0;
 
   /**
-   * Distance before the trench center (along X) of the stage-1 entrance target. Autopilot's
+   * Margin before the trench's near entry face (along X) for the stage-1 entrance target. The
+   * trench is a 1.2 m long structure, so the face sits at center +/- half length. Autopilot's
    * entry-angle spiral only finishes converging onto the centerline at its target, so the target
-   * must sit at the entrance: alignment completes before the robot is inside the structure.
+   * must sit before the entry face: alignment completes before the robot is inside the structure.
    */
-  public static final double ENTRANCE_DISTANCE_METERS = 1.0;
+  public static final double ENTRANCE_MARGIN_METERS = 0.4;
 
-  /** Distance past the trench center (along X) where the stage-2 exit target is placed. */
-  public static final double EXIT_DISTANCE_METERS = 1.8;
+  /** Margin past the trench's far exit face (along X) for the stage-2 exit target. */
+  public static final double EXIT_MARGIN_METERS = 1.2;
 
   /**
    * Minimum runway before the entrance plane for the flow-through approach (entry-angle spiral at

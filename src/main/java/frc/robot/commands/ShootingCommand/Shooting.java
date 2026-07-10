@@ -308,7 +308,7 @@ public class Shooting extends Command {
     runFeed();
 
     // Once a long-range CANrange reading is seen, start the timer and retract after it expires.
-    if (canRange() && !retractTimerStarted) {
+    if (!retractTimerStarted) {
       retractTimer.restart();
       retractTimerStarted = true;
     }
@@ -330,6 +330,7 @@ public class Shooting extends Command {
     runFeed();
     IntakeDeploy.mInstance.setPositionCentimeter(
         ShootingConstants.INTAKE_RETRACT_POSITION_CM.getAsDouble(), 80, 1000, 0);
+    
   }
 
   @Override

@@ -15,8 +15,8 @@ import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.commands.AutoCommands.AutoCommands;
 import frc.robot.commands.AutoCommands.BlockAutoBuilder;
+import frc.robot.commands.AutoTrenchCommand.AutoTrenchCommand;
 import frc.robot.commands.AutoalignIntakeCommand.AutoalignIntake;
-import frc.robot.commands.AutopilotTrenchCommand.AutopilotTrenchCommand;
 import frc.robot.commands.DriveCommands.DriveCommands;
 import frc.robot.commands.FerryCommand.Ferry;
 import frc.robot.commands.HoodZeroCommand.HoodZeroCommand;
@@ -188,7 +188,7 @@ public class RobotContainer {
             () -> -controller.getLeftY(),
             () -> -controller.getLeftX(),
             () -> -controller.getRightX()));
-    controller.povUp().whileTrue(new AutopilotTrenchCommand());
+    controller.povUp().whileTrue(new AutoTrenchCommand(() -> controller.getLeftY()));
     controller
         .povLeft()
         .whileTrue(Commands.run(() -> drive.runVelocity(new ChassisSpeeds(0, 2, 0)), drive));
@@ -247,6 +247,7 @@ public class RobotContainer {
                 () -> {
                   Indexer.mInstance.setV(-3);
                   Feeder.mInstance.setV(-3);
+                  IntakeRoller.mInstance.setV(-3);
                 }));
     controller
         .rightTrigger()
@@ -255,6 +256,7 @@ public class RobotContainer {
                 () -> {
                   Indexer.mInstance.setV(0);
                   Feeder.mInstance.setV(0);
+                  IntakeRoller.mInstance.setV(0);
                 }));
 
     controller.y().onTrue(new HoodZeroCommand().alongWith(new IntakeDeployOutwardZeroCommand()));

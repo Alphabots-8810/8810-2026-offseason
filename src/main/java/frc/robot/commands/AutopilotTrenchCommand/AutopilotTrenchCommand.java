@@ -15,8 +15,6 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
-import edu.wpi.first.wpilibj.DriverStation;
-import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.commands.AutoTrenchCommand.AutoTrenchCommandConstants;
 import frc.robot.subsystems.drive.Drive;
@@ -91,13 +89,7 @@ public class AutopilotTrenchCommand extends Command {
   @Override
   public void initialize() {
     Pose2d pose = drive.getPose();
-    boolean isRedAlliance =
-        DriverStation.getAlliance().isPresent()
-            && DriverStation.getAlliance().get() == Alliance.Red;
-    double trenchX =
-        isRedAlliance
-            ? AutoTrenchCommandConstants.RED_TRENCH_X_METERS
-            : AutoTrenchCommandConstants.BLUE_TRENCH_X_METERS;
+    double trenchX = getClosestTrenchX(pose.getX());
     trenchY = getClosestTrenchY(pose.getY());
 
     // Travel direction along X decides which side of the trench each target sits on and the
@@ -106,8 +98,13 @@ public class AutopilotTrenchCommand extends Command {
     travelingPositiveX = pose.getX() < trenchX;
     lockedHeading = travelingPositiveX ? Rotation2d.kPi : Rotation2d.kZero;
     double direction = travelingPositiveX ? 1.0 : -1.0;
-    entranceX = trenchX - direction * AutopilotTrenchCommandConstants.ENTRANCE_DISTANCE_METERS;
-    double exitX = trenchX + direction * AutopilotTrenchCommandConstants.EXIT_DISTANCE_METERS;
+    // Entrance/exit targets sit a margin outside the physical entry/exit faces of the 1.2 m
+    // structure (faces are at center +/- half length).
+    double halfLength = AutoTrenchCommandConstants.TRENCH_HALF_LENGTH_METERS;
+    entranceX =
+        trenchX - direction * (halfLength + AutopilotTrenchCommandConstants.ENTRANCE_MARGIN_METERS);
+    double exitX =
+        trenchX + direction * (halfLength + AutopilotTrenchCommandConstants.EXIT_MARGIN_METERS);
     Rotation2d entryAngle = travelingPositiveX ? Rotation2d.kZero : Rotation2d.kPi;
 
     Pose2d entrancePose = new Pose2d(entranceX, trenchY, lockedHeading);
@@ -216,6 +213,12 @@ public class AutopilotTrenchCommand extends Command {
     Logger.recordOutput(
         "AutopilotTrench/MeasuredSpeed",
         Math.hypot(measured.vxMetersPerSecond, measured.vyMetersPerSecond));
+  }
+
+  private static double getClosestTrenchX(double robotX) {
+    double blueX = AutoTrenchCommandConstants.BLUE_TRENCH_X_METERS;
+    double redX = AutoTrenchCommandConstants.RED_TRENCH_X_METERS;
+    return Math.abs(robotX - blueX) <= Math.abs(robotX - redX) ? blueX : redX;
   }
 
   private static double getClosestTrenchY(double robotY) {

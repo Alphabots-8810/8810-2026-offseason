@@ -8,11 +8,11 @@ import frc.robot.util.LoggedTunableNumber;
 public final class ShootingConstants {
   // Feed speeds applied once we transition into the SHOOT state.
   public static final LoggedTunableNumber IndexerRotpsTunable =
-      new LoggedTunableNumber("Shooting/IndexerRotps", 100);
+      new LoggedTunableNumber("Shooting/IndexerRotps", 80);
   public static final LoggedTunableNumber IntakeRollerRotpsTunable =
       new LoggedTunableNumber("Shooting/IntakeRollerRotps", 40);
   public static final LoggedTunableNumber FeederRotpsTunable =
-      new LoggedTunableNumber("Shooting/FeederRotps", 100);
+      new LoggedTunableNumber("Shooting/FeederRotps", 80);
 
   // Readiness tolerances used to decide when AIM is satisfied and we may shoot.
   public static final double SHOOTER_VELOCITY_TOLERANCE_ROTPS = 1.;
@@ -126,7 +126,7 @@ public final class ShootingConstants {
   // 1.05 reproduces the two field-measured points (2.118 m -> 49.5 and 2.54 m -> 51.08
   // motor rot/s, ratios 1.054 and 1.044 vs the sim).
   public static final LoggedTunableNumber kSpeedTunable =
-      new LoggedTunableNumber("Shooting/kSpeed", 1.08);
+      new LoggedTunableNumber("Shooting/kSpeed", 1.06);
 
   // Maple-sim projectile: launch speed (m/s) = drum target rot/s × this constant.
   public static final LoggedTunableNumber SimLaunchSpeedPerDrumRotps =
