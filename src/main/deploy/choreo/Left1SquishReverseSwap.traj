@@ -218,5 +218,6 @@
     {"t":4.08934, "x":3.22945, "y":5.49664, "heading":-1.5708, "vx":0.0, "vy":0.0, "omega":0.0, "ax":0.0, "ay":0.0, "alpha":0.0, "fx":[0.0,0.0,0.0,0.0], "fy":[0.0,0.0,0.0,0.0]}],
   "splits":[0]
  },
- "events":[]
+ "events":[
+   {"name":"IntakeDeploy", "from":{"target":0, "targetTimestamp":0.0, "offset":{"exp":"0.6 s", "val":0.6}}, "event":null}]
 }

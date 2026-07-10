@@ -14,9 +14,9 @@ import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.commands.AutoCommands.AutoCommands;
+import frc.robot.commands.AutoCommands.BlockAutoBuilder;
 import frc.robot.commands.AutoalignIntakeCommand.AutoalignIntake;
-import frc.robot.commands.DriveCommands.CornerPivotCommand;
-import frc.robot.commands.DriveCommands.CornerPivotCommand.PivotCorner;
+import frc.robot.commands.AutopilotTrenchCommand.AutopilotTrenchCommand;
 import frc.robot.commands.DriveCommands.DriveCommands;
 import frc.robot.commands.FerryCommand.Ferry;
 import frc.robot.commands.HoodZeroCommand.HoodZeroCommand;
@@ -76,6 +76,7 @@ public class RobotContainer {
 
   // Dashboard inputs
   private final LoggedDashboardChooser<Command> autoChooser;
+  private final BlockAutoBuilder blockAutoBuilder = new BlockAutoBuilder();
 
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   public RobotContainer() {
@@ -149,6 +150,10 @@ public class RobotContainer {
     autoChooser = new LoggedDashboardChooser<>("Auto Choices", AutoBuilder.buildAutoChooser());
     autoChooser.addOption("Left Three-Piece", AutoCommands.leftThreePieceAuto());
 
+    // Building-block auto: side + per-section path variants selected on the BlockAuto/* choosers,
+    // assembled when autonomous starts.
+    autoChooser.addOption("Block Auto (dashboard)", blockAutoBuilder.buildCommand());
+
     // Set up SysId routines
     autoChooser.addOption(
         "Drive Wheel Radius Characterization", DriveCommands.wheelRadiusCharacterization(drive));
@@ -183,10 +188,7 @@ public class RobotContainer {
             () -> -controller.getLeftY(),
             () -> -controller.getLeftX(),
             () -> -controller.getRightX()));
-    controller
-        .povUp()
-        .whileTrue(
-            new CornerPivotCommand(drive, PivotCorner.FRONT_LEFT, () -> -controller.getRightX()));
+    controller.povUp().whileTrue(new AutopilotTrenchCommand());
     controller
         .povLeft()
         .whileTrue(Commands.run(() -> drive.runVelocity(new ChassisSpeeds(0, 2, 0)), drive));
@@ -309,5 +311,10 @@ public class RobotContainer {
    */
   public Command getAutonomousCommand() {
     return autoChooser.get();
+  }
+
+  /** Dashboard outputs refreshed every loop (block-auto selection table, etc.). */
+  public void updateDashboardOutputs() {
+    blockAutoBuilder.publishSelection();
   }
 }

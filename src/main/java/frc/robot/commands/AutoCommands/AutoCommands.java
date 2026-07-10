@@ -23,11 +23,11 @@ public final class AutoCommands {
 
   private AutoCommands() {}
 
-  private static Command followChoreo(String name) {
+  static Command followChoreo(String name) {
     return AutoBuilder.followPath(loadChoreoPath(name));
   }
 
-  private static PathPlannerPath loadChoreoPath(String name) {
+  static PathPlannerPath loadChoreoPath(String name) {
     try {
       return PathPlannerPath.fromChoreoTrajectory(name);
     } catch (Exception e) {
@@ -39,7 +39,7 @@ public final class AutoCommands {
    * Reset odometry to a Choreo path's holonomic start pose, mirrored to the red alliance side when
    * on red (Choreo paths are authored on the blue origin). No-op if the path has no start pose.
    */
-  private static Command resetToStart(PathPlannerPath path) {
+  static Command resetToStart(PathPlannerPath path) {
     Optional<Pose2d> start = path.getStartingHolonomicPose();
     if (start.isEmpty()) {
       return Commands.none();
@@ -55,12 +55,27 @@ public final class AutoCommands {
   /**
    * Path followed while the intake deploys and runs the whole time, stopping when the path ends.
    */
-  private static Command pathWithIntake(String name) {
+  static Command pathWithIntake(String name) {
     return followChoreo(name).raceWith(new IntakeCommand());
   }
 
+  /**
+   * First path of an auto: reset odometry to the path's start pose, then follow it with the intake
+   * deploying and running from {@code INTAKE_START_DELAY_SEC} in until the path ends.
+   */
+  static Command firstPathWithIntake(String name) {
+    PathPlannerPath path = loadChoreoPath(name);
+    return Commands.sequence(
+        resetToStart(path),
+        followChoreo(name)
+            .raceWith(
+                Commands.sequence(
+                    Commands.waitSeconds(AutoCommandsConstants.INTAKE_START_DELAY_SEC),
+                    new IntakeCommand())));
+  }
+
   /** Timed shooting burst: aim + shoot for a fixed duration, then cleanly retract. */
-  private static Command timedShoot() {
+  static Command timedShoot() {
     return new Shooting(false, () -> 0.0, () -> 0.0)
         .withTimeout(AutoCommandsConstants.SHOOTING_DURATION_SEC);
   }
@@ -78,6 +93,17 @@ public final class AutoCommands {
    * </ol>
    */
   public static Command leftThreePieceAuto() {
+    try {
+      return buildLeftThreePieceAuto();
+    } catch (RuntimeException e) {
+      // A missing/renamed .traj must never crash the robot program: report it and hand the
+      // chooser a no-op so everything else (teleop, other autos) still works.
+      DriverStation.reportError("Left three-piece auto failed to load: " + e.getMessage(), false);
+      return Commands.print("Left three-piece auto unavailable: missing Choreo trajectory");
+    }
+  }
+
+  private static Command buildLeftThreePieceAuto() {
     PathPlannerPath path1 = loadChoreoPath(AutoCommandsConstants.LEFT_PATH_1);
 
     return Commands.sequence(
