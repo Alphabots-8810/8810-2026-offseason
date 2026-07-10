@@ -48,10 +48,10 @@ public final class ShootingConstants {
   // Once SHOOT starts and the CANrange reports a long-distance reading, wait this long (seconds)
   // before retracting the intake.
   public static final LoggedTunableNumber RETRACT_DELAY_SEC =
-      new LoggedTunableNumber("Shooting/retract_delay", 0.1);
+      new LoggedTunableNumber("Shooting/retract_delay", 0.2);
   // Intake deploy position to retract to, in centimeters.
   public static final LoggedTunableNumber INTAKE_RETRACT_POSITION_CM =
-      new LoggedTunableNumber("Shooting/retract", 45);
+      new LoggedTunableNumber("Shooting/retract", 35);
 
   // Distance (meters, robot to HUB) -> shooter flywheel velocity (rotations / sec).
   public static final InterpolatingDoubleTreeMap distanceToShooterRotps =

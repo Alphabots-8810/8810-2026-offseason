@@ -330,7 +330,6 @@ public class Shooting extends Command {
     runFeed();
     IntakeDeploy.mInstance.setPositionCentimeter(
         ShootingConstants.INTAKE_RETRACT_POSITION_CM.getAsDouble(), 80, 1000, 0);
-    
   }
 
   @Override

@@ -86,6 +86,23 @@ public class MotorSubsystem extends SubsystemBase {
     io.setEncoderPositionRot(positionRot);
   }
 
+  /**
+   * True when the mechanism is within tolerance of the active closed-loop setpoint. Compares
+   * position (rot) in POSITION mode and velocity (rot/sec) in VELOCITY mode; false in open-loop
+   * modes (VOLTAGE, CURRENT, DISABLED) where no setpoint exists.
+   */
+  public boolean isAtSetpoint(double toleranceRotOrRotPerSec) {
+    switch (inputs.controlMode) {
+      case POSITION:
+        return Math.abs(getPositionRot() - getPositionSetpointRot()) < toleranceRotOrRotPerSec;
+      case VELOCITY:
+        return Math.abs(getVelocityRotPerSec() - getVelocitySetpointRotPerSec())
+            < toleranceRotOrRotPerSec;
+      default:
+        return false;
+    }
+  }
+
   public void stop() {
     io.stop();
   }
