@@ -33,8 +33,8 @@ import org.littletonrobotics.junction.Logger;
  * (PASS) retargets to the exit pose; the robot is already on the centerline, so this leg is a
  * straight line that decelerates to a stop past the structure.
  *
- * <p>Heading is locked to kZero or k180, whichever is closer at start, and held through the pass.
- * Finishes when Autopilot reports the exit target reached.
+ * <p>Heading is locked opposite to the travel direction (back of the robot leads through the
+ * trench) and held through the pass. Finishes when Autopilot reports the exit target reached.
  */
 public class AutopilotTrenchCommand extends Command {
   private enum Stage {
@@ -99,11 +99,12 @@ public class AutopilotTrenchCommand extends Command {
             ? AutoTrenchCommandConstants.RED_TRENCH_X_METERS
             : AutoTrenchCommandConstants.BLUE_TRENCH_X_METERS;
     trenchY = getClosestTrenchY(pose.getY());
-    lockedHeading = getClosestZeroOrPiHeading(drive.getRotation());
 
     // Travel direction along X decides which side of the trench each target sits on and the
-    // entry angle Autopilot funnels along; the locked heading is independent of it.
+    // entry angle Autopilot funnels along. The locked heading faces opposite to travel, so the
+    // robot always passes the trench back-first.
     travelingPositiveX = pose.getX() < trenchX;
+    lockedHeading = travelingPositiveX ? Rotation2d.kPi : Rotation2d.kZero;
     double direction = travelingPositiveX ? 1.0 : -1.0;
     entranceX = trenchX - direction * AutopilotTrenchCommandConstants.ENTRANCE_DISTANCE_METERS;
     double exitX = trenchX + direction * AutopilotTrenchCommandConstants.EXIT_DISTANCE_METERS;
@@ -215,13 +216,6 @@ public class AutopilotTrenchCommand extends Command {
     Logger.recordOutput(
         "AutopilotTrench/MeasuredSpeed",
         Math.hypot(measured.vxMetersPerSecond, measured.vyMetersPerSecond));
-  }
-
-  private static Rotation2d getClosestZeroOrPiHeading(Rotation2d heading) {
-    if (heading.getCos() >= 0.0) {
-      return Rotation2d.kZero;
-    }
-    return Rotation2d.kPi;
   }
 
   private static double getClosestTrenchY(double robotY) {
