@@ -7,6 +7,7 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.Subsystem;
 import frc.robot.commands.AutopilotTrenchCommand.AutopilotTrenchCommand;
+import frc.robot.commands.IntakeDeployZeroCommand.IntakeDeployZeroCommand;
 import frc.robot.subsystems.Drum.Drum;
 import frc.robot.subsystems.Feeder.Feeder;
 import frc.robot.subsystems.Hood.Hood;
@@ -34,13 +35,12 @@ import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
  * autonomous starts, so choosers can be changed on Elastic right up to the match:
  *
  * <ol>
- *   <li>Section 1 path (reset odometry to its start, intake 1 s in)
+ *   <li>Section 1 path (reset odometry to its start and launch immediately; the path's
+ *       "IntakeDeploy" event marker inward-zeroes the intake deploy while driving, then intakes)
  *   <li>Timed shooting
- *   <li>Autopilot trench pass
- *   <li>Section 2 path (with intake)
+ *   <li>Autopilot trench pass + Section 2 path, intaking from the moment the shot ends
  *   <li>Timed shooting
- *   <li>Autopilot trench pass
- *   <li>Section 3 path (with intake)
+ *   <li>Autopilot trench pass + Section 3 path, intaking from the moment the shot ends
  * </ol>
  *
  * <p>Selecting {@code None} for a section skips that path (the shots/trench passes around it still
@@ -68,23 +68,11 @@ public class BlockAutoBuilder {
 
   private final LoggedDashboardChooser<String> sideChooser;
   private final List<LoggedDashboardChooser<String>> sectionChoosers = new ArrayList<>();
-  // Base names (no .traj) of every trajectory deployed at boot; used for the dashboard table's
-  // OK/MISSING check without touching the filesystem every loop.
-  private final Set<String> availableTrajectories = new TreeSet<>();
 
   public BlockAutoBuilder() {
     sideChooser = new LoggedDashboardChooser<>("BlockAuto/Side");
     sideChooser.addDefaultOption("Left", "Left");
     sideChooser.addOption("Right", "Right");
-
-    File[] trajFiles = new File(Filesystem.getDeployDirectory(), "choreo").listFiles();
-    if (trajFiles != null) {
-      for (File file : trajFiles) {
-        if (file.getName().endsWith(".traj")) {
-          availableTrajectories.add(file.getName().substring(0, file.getName().length() - 5));
-        }
-      }
-    }
 
     Map<Integer, Set<String>> variantsBySection = scanVariants();
     for (int section = 1; section <= NUM_SECTIONS; section++) {
@@ -150,50 +138,18 @@ public class BlockAutoBuilder {
             IntakeRoller.mInstance));
   }
 
-  /**
-   * Publishes a readable preview of the currently selected auto to the dashboard. Call every loop
-   * (cheap: string writes only, NT dedupes unchanged values). Shown under {@code
-   * SmartDashboard/BlockAuto/}: per-section resolved trajectory names with an OK/MISSING check, and
-   * the full step-by-step sequence as a text table.
-   */
+  /** Publishes only the three selected trajectory names for a compact dashboard preview. */
   public void publishSelection() {
     String side = sideChooser.get();
-    List<String> lines = new ArrayList<>();
-    boolean allOk = true;
-
     for (int i = 0; i < NUM_SECTIONS; i++) {
       String variant = sectionChoosers.get(i).get();
       int section = i + 1;
-      String status;
-      String display;
-      if (variant == null || NONE_OPTION.equals(variant)) {
-        display = "(skipped)";
-        status = "skipped";
-      } else {
-        String name = resolveTrajName(side, section, variant);
-        boolean exists = availableTrajectories.contains(name);
-        allOk &= exists;
-        display = name;
-        status = exists ? "OK" : "MISSING";
-      }
-      SmartDashboard.putString("BlockAuto/Table/Path" + section, display + "  [" + status + "]");
-
-      if (!"skipped".equals(status)) {
-        String extras = section == 1 ? " + reset pose + intake" : " + intake";
-        lines.add((lines.size() + 1) + ". Path " + display + " [" + status + "]" + extras);
-      }
-      if (i < NUM_SECTIONS - 1) {
-        lines.add(
-            (lines.size() + 1) + ". Shoot (" + AutoCommandsConstants.SHOOTING_DURATION_SEC + "s)");
-        lines.add((lines.size() + 1) + ". Trench pass (Autopilot)");
-      }
+      String display =
+          variant == null || NONE_OPTION.equals(variant)
+              ? "None"
+              : resolveTrajName(side, section, variant);
+      SmartDashboard.putString("BlockAuto/Table/Path" + section, display);
     }
-
-    SmartDashboard.putStringArray("BlockAuto/Table/Sequence", lines.toArray(String[]::new));
-    SmartDashboard.putString("BlockAuto/Table/SequenceText", String.join("\n", lines));
-    SmartDashboard.putBoolean("BlockAuto/Table/AllTrajectoriesFound", allOk);
-    SmartDashboard.putStringArray(
-        "BlockAuto/Table/DeployedTrajectories", availableTrajectories.toArray(String[]::new));
   }
 
   /** Full trajectory base name for a side + section + chooser variant. */
@@ -223,16 +179,23 @@ public class BlockAutoBuilder {
       List<Command> steps = new ArrayList<>();
       if (pathNames[0] != null) {
         steps.add(AutoCommands.firstPathWithIntake(pathNames[0]));
+      } else {
+        // No section-1 path means no "IntakeDeploy" marker ever fires, so zero the intake deploy
+        // here — otherwise the boot encoder value (deployed) makes every later intake deploy
+        // setpoint a no-op and the intake never comes down all auto.
+        steps.add(
+            new IntakeDeployZeroCommand(IntakeDeployZeroCommand.Direction.INWARD)
+                .withTimeout(AutoCommandsConstants.INWARD_ZERO_TIMEOUT_SEC));
       }
-      steps.add(AutoCommands.timedShoot());
-      steps.add(new AutopilotTrenchCommand());
-      if (pathNames[1] != null) {
-        steps.add(AutoCommands.pathWithIntake(pathNames[1]));
-      }
-      steps.add(AutoCommands.timedShoot());
-      steps.add(new AutopilotTrenchCommand());
-      if (pathNames[2] != null) {
-        steps.add(AutoCommands.pathWithIntake(pathNames[2]));
+      // Sections 2/3: the intake starts the moment the shot ends and runs through the trench
+      // pass and the path, so fuel in and around the trench is collected too.
+      for (int section = 1; section < NUM_SECTIONS; section++) {
+        steps.add(AutoCommands.timedShoot());
+        if (pathNames[section] != null) {
+          steps.add(AutoCommands.trenchThenPathWithIntake(pathNames[section]));
+        } else {
+          steps.add(new AutopilotTrenchCommand());
+        }
       }
       return Commands.sequence(steps.toArray(Command[]::new));
     } catch (RuntimeException e) {

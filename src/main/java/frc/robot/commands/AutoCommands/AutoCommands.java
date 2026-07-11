@@ -8,6 +8,7 @@ import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
+import frc.robot.commands.AutopilotTrenchCommand.AutopilotTrenchCommand;
 import frc.robot.commands.IntakeCommand.IntakeCommand;
 import frc.robot.commands.ShootingCommand.Shooting;
 import frc.robot.subsystems.drive.Drive;
@@ -16,8 +17,8 @@ import java.util.Optional;
 /**
  * Autonomous routines built in Java as a sequential command group.
  *
- * <p>{@code leftThreePieceAuto()} runs: Left1_path1 (intake opens 1 s in), timed Shooting,
- * Left1_path2 while intaking, timed Shooting, Left1_path3 while intaking.
+ * <p>{@code leftThreePieceAuto()} runs: Left1_path1 (intake via its "IntakeDeploy" event marker),
+ * timed Shooting, Left1_path2 while intaking, timed Shooting, Left1_path3 while intaking.
  */
 public final class AutoCommands {
 
@@ -60,18 +61,29 @@ public final class AutoCommands {
   }
 
   /**
-   * First path of an auto: reset odometry to the path's start pose, then follow it with the intake
-   * deploying and running from {@code INTAKE_START_DELAY_SEC} in until the path ends.
+   * Autopilot trench pass followed by a path, with the intake deployed and running across the whole
+   * span — starting the moment the previous shot ends, so fuel sitting in and around the trench is
+   * collected too. The race ends with the path, stopping the roller/indexer. Only for paths WITHOUT
+   * an "IntakeDeploy" event marker: a marker would put the intake requirements on the path command
+   * and make the race a requirement conflict.
+   */
+  static Command trenchThenPathWithIntake(String name) {
+    return Commands.sequence(new AutopilotTrenchCommand(name), followChoreo(name))
+        .raceWith(new IntakeCommand());
+  }
+
+  /**
+   * First path of an auto: reset odometry to the path's start pose, then follow it immediately — no
+   * stationary work before launch. The path's "IntakeDeploy" Choreo event marker (registered on
+   * {@code NamedCommands} in RobotContainer) inward-zeroes the intake deploy while driving, then
+   * deploys and runs the intake.
+   *
+   * <p>Do NOT race the path with an IntakeCommand here: the event marker already gives the path
+   * command the intake requirements, so a race would be a requirement conflict.
    */
   static Command firstPathWithIntake(String name) {
     PathPlannerPath path = loadChoreoPath(name);
-    return Commands.sequence(
-        resetToStart(path),
-        followChoreo(name)
-            .raceWith(
-                Commands.sequence(
-                    Commands.waitSeconds(AutoCommandsConstants.INTAKE_START_DELAY_SEC),
-                    new IntakeCommand())));
+    return Commands.sequence(resetToStart(path), followChoreo(name));
   }
 
   /** Timed shooting burst: aim + shoot for a fixed duration, then cleanly retract. */
@@ -84,8 +96,8 @@ public final class AutoCommands {
    * Left three-piece auto:
    *
    * <ol>
-   *   <li>Reset pose to Left1_path1 start, then follow Left1_path1; intake opens 1 s after the path
-   *       starts and runs until the path finishes.
+   *   <li>Reset pose to Left1_path1 start, then follow it immediately; the path's "IntakeDeploy"
+   *       event marker inward-zeroes the intake deploy while driving, then deploys and intakes.
    *   <li>Timed Shooting.
    *   <li>Follow Left1_path2 while intaking.
    *   <li>Timed Shooting.
@@ -104,29 +116,21 @@ public final class AutoCommands {
   }
 
   private static Command buildLeftThreePieceAuto() {
-    PathPlannerPath path1 = loadChoreoPath(AutoCommandsConstants.LEFT_PATH_1);
-
     return Commands.sequence(
-        // 1) Drive Left1_path1, opening the intake 1 s in. The race ends with the path, so the
-        //    intake's end() stops the roller/indexer exactly when the path finishes.
-        Commands.sequence(
-            resetToStart(path1),
-            followChoreo(AutoCommandsConstants.LEFT_PATH_1)
-                .raceWith(
-                    Commands.sequence(
-                        Commands.waitSeconds(AutoCommandsConstants.INTAKE_START_DELAY_SEC),
-                        new IntakeCommand()))),
+        // 1) Reset pose and drive Left1_path1 immediately; its "IntakeDeploy" marker zeroes the
+        //    intake deploy while driving, then deploys and intakes.
+        firstPathWithIntake(AutoCommandsConstants.LEFT_PATH_1),
 
         // 2) Timed shooting.
         timedShoot(),
 
         // 3) Left1_path2 while intaking.
-        pathWithIntake(AutoCommandsConstants.LEFT_PATH_2),
+        followChoreo(AutoCommandsConstants.LEFT_PATH_2).raceWith(new IntakeCommand()),
 
         // 4) Timed shooting.
         timedShoot(),
 
         // 5) Left1_path3 while intaking.
-        pathWithIntake(AutoCommandsConstants.LEFT_PATH_3));
+        followChoreo(AutoCommandsConstants.LEFT_PATH_3).raceWith(new IntakeCommand()));
   }
 }

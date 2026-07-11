@@ -4,6 +4,8 @@ import static edu.wpi.first.units.Units.Degrees;
 import static edu.wpi.first.units.Units.Meters;
 import static edu.wpi.first.units.Units.MetersPerSecond;
 
+import com.pathplanner.lib.path.PathPlannerPath;
+import com.pathplanner.lib.util.FlippingUtil;
 import com.therekrab.autopilot.APConstraints;
 import com.therekrab.autopilot.APProfile;
 import com.therekrab.autopilot.APTarget;
@@ -15,27 +17,27 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
+import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.commands.AutoTrenchCommand.AutoTrenchCommandConstants;
 import frc.robot.subsystems.drive.Drive;
 import org.littletonrobotics.junction.Logger;
 
 /**
- * Passes through the closest trench using the Autopilot library, in two stages.
+ * Passes through the closest trench using the Autopilot library, in three stages.
  *
- * <p>Autopilot's entry-angle spiral only finishes converging onto the entry line at its target, so
- * a single target past the trench would leave the robot correcting diagonally while inside the
- * structure. Instead, stage 1 (APPROACH) targets the trench <i>entrance</i> with a nonzero end
- * velocity, so the robot is centered on the trench line before the structure and carries full pass
- * speed through the entrance instead of decelerating. Once the entrance plane is crossed, stage 2
- * (PASS) retargets to the exit pose; the robot is already on the centerline, so this leg is a
- * straight line that decelerates to a stop past the structure.
+ * <p>ALIGN first moves to a centerline waypoint in the open area before the trench. APPROACH then
+ * moves straight along the trench centerline to its entrance, and PASS continues on that same line
+ * to the exit. No entry-angle target is used: Autopilot's entry-angle behavior intentionally makes
+ * a spiral, which is undesirable beside the REBUILT hub and bump obstacles.
  *
  * <p>Heading is locked opposite to the travel direction (back of the robot leads through the
  * trench) and held through the pass. Finishes when Autopilot reports the exit target reached.
  */
 public class AutopilotTrenchCommand extends Command {
   private enum Stage {
+    ALIGN,
     APPROACH,
     PASS
   }
@@ -53,6 +55,7 @@ public class AutopilotTrenchCommand extends Command {
               .withBeelineRadius(Meters.of(AutopilotTrenchCommandConstants.BEELINE_RADIUS_METERS)));
 
   private final Drive drive;
+  private final Pose2d nextPathStartPose;
   private final ProfiledPIDController angleController =
       new ProfiledPIDController(
           AutopilotTrenchCommandConstants.ANGLE_KP,
@@ -62,26 +65,31 @@ public class AutopilotTrenchCommand extends Command {
               AutopilotTrenchCommandConstants.ANGLE_MAX_VELOCITY_RAD_PER_SEC,
               AutopilotTrenchCommandConstants.ANGLE_MAX_ACCELERATION_RAD_PER_SEC_SQ));
 
-  private APTarget entranceFlowTarget = new APTarget(Pose2d.kZero);
-  private APTarget entranceStopTarget = new APTarget(Pose2d.kZero);
+  private APTarget alignmentTarget = new APTarget(Pose2d.kZero);
+  private APTarget entranceTarget = new APTarget(Pose2d.kZero);
   private APTarget exitTarget = new APTarget(Pose2d.kZero);
-  private Stage stage = Stage.APPROACH;
+  private Stage stage = Stage.ALIGN;
   private double entranceX = 0.0;
   private double trenchY = 0.0;
   private Rotation2d lockedHeading = Rotation2d.kZero;
   private boolean travelingPositiveX = true;
-  // Flow-through: entry-angle spiral carrying pass speed across the entrance. Cleared when there
-  // isn't enough runway for the spiral to converge, or if the plane is crossed misaligned; the
-  // approach then beelines to the entrance point and stops there instead.
-  private boolean flowThroughApproach = true;
-
   // Autopilot ramps its output from the speeds we feed it (output = fed speed + accel*dt). Feeding
   // measured speeds throttles the ramp to the drivetrain's tracking lag, so we feed back our own
   // previous setpoint instead and let the drive's closed loop chase it. Field-relative.
   private Translation2d lastSetpointFieldRel = Translation2d.kZero;
 
   public AutopilotTrenchCommand() {
+    this(null);
+  }
+
+  /**
+   * Creates a trench pass that finishes exactly at the next Choreo path's starting pose. The
+   * current Path2/Path3 trajectories begin at a zero-velocity StopPoint, so Autopilot stops there
+   * for a safe and continuous handoff.
+   */
+  public AutopilotTrenchCommand(String nextPathName) {
     this.drive = Drive.mInstance;
+    this.nextPathStartPose = nextPathName == null ? null : loadPathStartPose(nextPathName);
     angleController.enableContinuousInput(-Math.PI, Math.PI);
     addRequirements(drive);
   }
@@ -105,24 +113,29 @@ public class AutopilotTrenchCommand extends Command {
         trenchX - direction * (halfLength + AutopilotTrenchCommandConstants.ENTRANCE_MARGIN_METERS);
     double exitX =
         trenchX + direction * (halfLength + AutopilotTrenchCommandConstants.EXIT_MARGIN_METERS);
-    Rotation2d entryAngle = travelingPositiveX ? Rotation2d.kZero : Rotation2d.kPi;
-
     Pose2d entrancePose = new Pose2d(entranceX, trenchY, lockedHeading);
-    // Nonzero end velocity keeps the commanded speed at the cruise cap through the entrance
-    // instead of profiling down to a stop there.
-    entranceFlowTarget =
+    double alignmentX =
+        entranceX - direction * AutopilotTrenchCommandConstants.ALIGNMENT_STANDOFF_METERS;
+    alignmentTarget = new APTarget(new Pose2d(alignmentX, trenchY, lockedHeading));
+    // No entry angle on either target. Translation therefore uses an ordinary direct approach
+    // rather than Autopilot's spiral. ALIGN ends at rest; APPROACH accelerates straight down the
+    // centerline and carries its velocity into PASS.
+    entranceTarget =
         new APTarget(entrancePose)
-            .withEntryAngle(entryAngle)
             .withVelocity(AutopilotTrenchCommandConstants.PASS_SPEED_METERS_PER_SEC);
-    // No entry angle: beeline straight to the entrance point and stop there. Used when there is
-    // no runway for the spiral to converge before the structure.
-    entranceStopTarget = new APTarget(entrancePose);
-    exitTarget = new APTarget(new Pose2d(exitX, trenchY, lockedHeading)).withEntryAngle(entryAngle);
+    Pose2d finalPose = getAllianceAdjustedNextPathStartPose();
+    if (finalPose == null) {
+      finalPose = new Pose2d(exitX, trenchY, lockedHeading);
+    }
+    exitTarget = new APTarget(finalPose);
 
-    double runway = direction * (entranceX - pose.getX());
-    flowThroughApproach = runway >= AutopilotTrenchCommandConstants.MIN_RUNWAY_METERS;
-    stage =
-        hasCrossedEntrancePlane(pose) && isAlignedWithTrench(pose) ? Stage.PASS : Stage.APPROACH;
+    if (hasCrossedEntrancePlane(pose) && isAlignedWithTrench(pose)) {
+      stage = Stage.PASS;
+    } else if (isReadyForStraightApproach(pose, alignmentX)) {
+      stage = Stage.APPROACH;
+    } else {
+      stage = Stage.ALIGN;
+    }
     angleController.reset(drive.getRotation().getRadians());
 
     // Seed the velocity setpoint from the measured speed so a moving start ramps smoothly.
@@ -135,20 +148,22 @@ public class AutopilotTrenchCommand extends Command {
   @Override
   public void execute() {
     Pose2d pose = drive.getPose();
+    if (stage == Stage.ALIGN && autopilot.atTarget(pose, alignmentTarget)) {
+      stage = Stage.APPROACH;
+      lastSetpointFieldRel = Translation2d.kZero;
+    }
     if (stage == Stage.APPROACH && hasCrossedEntrancePlane(pose)) {
       if (isAlignedWithTrench(pose)) {
         stage = Stage.PASS;
-      } else {
-        // Crossed the plane misaligned: never enter the trench like this. Fall back to driving
-        // straight to the entrance point (which is now behind/off to the side) and settling there.
-        flowThroughApproach = false;
       }
     }
     APTarget target;
     if (stage == Stage.PASS) {
       target = exitTarget;
+    } else if (stage == Stage.APPROACH) {
+      target = entranceTarget;
     } else {
-      target = flowThroughApproach ? entranceFlowTarget : entranceStopTarget;
+      target = alignmentTarget;
     }
     // Feed the previous velocity setpoint (as robot-relative speeds) instead of measured speeds:
     // Autopilot's acceleration ramp then runs at the configured rate regardless of how much the
@@ -193,6 +208,13 @@ public class AutopilotTrenchCommand extends Command {
     return lateralOk && headingOk;
   }
 
+  private boolean isReadyForStraightApproach(Pose2d pose, double alignmentX) {
+    return Math.abs(pose.getY() - trenchY)
+            <= AutopilotTrenchCommandConstants.ALIGN_Y_TOLERANCE_METERS
+        && Math.abs(pose.getX() - alignmentX)
+            <= AutopilotTrenchCommandConstants.ALIGN_X_TOLERANCE_METERS;
+  }
+
   @Override
   public void end(boolean interrupted) {
     drive.stop();
@@ -200,8 +222,8 @@ public class AutopilotTrenchCommand extends Command {
 
   private void logOutputs(double vx, double vy, double omega) {
     Logger.recordOutput("AutopilotTrench/Stage", stage.toString());
-    Logger.recordOutput("AutopilotTrench/FlowThroughApproach", flowThroughApproach);
-    Logger.recordOutput("AutopilotTrench/EntrancePose", entranceFlowTarget.getReference());
+    Logger.recordOutput("AutopilotTrench/AlignmentPose", alignmentTarget.getReference());
+    Logger.recordOutput("AutopilotTrench/EntrancePose", entranceTarget.getReference());
     Logger.recordOutput("AutopilotTrench/ExitPose", exitTarget.getReference());
     Logger.recordOutput(
         "AutopilotTrench/LateralError", drive.getPose().getY() - exitTarget.getReference().getY());
@@ -226,5 +248,26 @@ public class AutopilotTrenchCommand extends Command {
       return AutoTrenchCommandConstants.UP_TRENCH_Y_METERS;
     }
     return AutoTrenchCommandConstants.DOWN_TRENCH_Y_METERS;
+  }
+
+  private static Pose2d loadPathStartPose(String pathName) {
+    try {
+      return PathPlannerPath.fromChoreoTrajectory(pathName)
+          .getStartingHolonomicPose()
+          .orElseThrow(
+              () -> new IllegalArgumentException("Path has no starting pose: " + pathName));
+    } catch (Exception e) {
+      throw new IllegalArgumentException("Failed to load next Choreo path: " + pathName, e);
+    }
+  }
+
+  private Pose2d getAllianceAdjustedNextPathStartPose() {
+    if (nextPathStartPose == null) {
+      return null;
+    }
+    boolean isRed =
+        DriverStation.getAlliance().isPresent()
+            && DriverStation.getAlliance().get() == Alliance.Red;
+    return isRed ? FlippingUtil.flipFieldPose(nextPathStartPose) : nextPathStartPose;
   }
 }

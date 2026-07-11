@@ -3,8 +3,9 @@ package frc.robot.commands.AutoCommands;
 public final class AutoCommandsConstants {
   private AutoCommandsConstants() {}
 
-  // How long after Left1_path1 starts before the intake deploys and runs.
-  public static final double INTAKE_START_DELAY_SEC = 1.0;
+  // Safety cap on the pre-path inward intake zero: if the current spike is never seen, give up
+  // and run the auto without the intake rather than stalling on the first step.
+  public static final double INWARD_ZERO_TIMEOUT_SEC = 1.0;
 
   // How long each timed Shooting burst runs in the auto sequence.
   public static final double SHOOTING_DURATION_SEC = 2.0;

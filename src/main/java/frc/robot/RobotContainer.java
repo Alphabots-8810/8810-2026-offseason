@@ -1,6 +1,7 @@
 package frc.robot;
 
 import com.pathplanner.lib.auto.AutoBuilder;
+import com.pathplanner.lib.auto.NamedCommands;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
@@ -21,7 +22,7 @@ import frc.robot.commands.DriveCommands.DriveCommands;
 import frc.robot.commands.FerryCommand.Ferry;
 import frc.robot.commands.HoodZeroCommand.HoodZeroCommand;
 import frc.robot.commands.IntakeCommand.IntakeCommand;
-import frc.robot.commands.IntakeDeployOutwardZeroCommand.IntakeDeployOutwardZeroCommand;
+import frc.robot.commands.IntakeDeployZeroCommand.IntakeDeployZeroCommand;
 import frc.robot.commands.ManualCommand.Manual;
 import frc.robot.commands.ShootingCommand.Shooting;
 import frc.robot.generated.TunerConstants;
@@ -146,6 +147,19 @@ public class RobotContainer {
     // periodic reads the drive pose
     cameras = Cameras.mInstance;
 
+    // Choreo event-marker bindings. Must be registered before any path is loaded: PathPlanner
+    // resolves a marker's command from NamedCommands at .traj parse time. On the Left1*/Right1*
+    // trajectories: "IntakeZero" at t=0 inward-zeroes the intake deploy while the robot launches
+    // (it starts the match seated on the stowed hard stop, so the spike is quick even while
+    // driving); "IntakeDeploy" at ~0.55 s deploys and runs the intake, canceled (roller/indexer
+    // stopped) when the path ends. Event commands share the EventScheduler, where a later command
+    // cancels an earlier one with overlapping requirements — so a zero that never sees its current
+    // spike is simply superseded by the deploy (encoder not reset, intake stays stowed) instead of
+    // needing a timeout.
+    NamedCommands.registerCommand(
+        "IntakeZero", new IntakeDeployZeroCommand(IntakeDeployZeroCommand.Direction.INWARD));
+    NamedCommands.registerCommand("IntakeDeploy", new IntakeCommand());
+
     // Set up auto routines
     autoChooser = new LoggedDashboardChooser<>("Auto Choices", AutoBuilder.buildAutoChooser());
     autoChooser.addOption("Left Three-Piece", AutoCommands.leftThreePieceAuto());
@@ -259,7 +273,11 @@ public class RobotContainer {
                   IntakeRoller.mInstance.setV(0);
                 }));
 
-    controller.y().onTrue(new HoodZeroCommand().alongWith(new IntakeDeployOutwardZeroCommand()));
+    controller
+        .y()
+        .onTrue(
+            new HoodZeroCommand()
+                .alongWith(new IntakeDeployZeroCommand(IntakeDeployZeroCommand.Direction.OUTWARD)));
     controller.rightBumper().whileTrue(shootOrFerryCommand());
     controller.leftTrigger(0.1).whileTrue(new IntakeCommand());
     controller

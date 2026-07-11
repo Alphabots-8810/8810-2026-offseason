@@ -18,12 +18,10 @@ public final class AutopilotTrenchCommandConstants {
   /** Margin past the trench's far exit face (along X) for the stage-2 exit target. */
   public static final double EXIT_MARGIN_METERS = 1.2;
 
-  /**
-   * Minimum runway before the entrance plane for the flow-through approach (entry-angle spiral at
-   * pass speed). With less room than this, the spiral can't converge in time, so the approach
-   * instead beelines to the entrance point and stops there before passing.
-   */
-  public static final double MIN_RUNWAY_METERS = 0.5;
+  /** Open-area distance before the entrance used to center the robot before driving straight in. */
+  public static final double ALIGNMENT_STANDOFF_METERS = 0.75;
+
+  public static final double ALIGN_X_TOLERANCE_METERS = 0.08;
 
   /** Lateral and heading tolerance required at the entrance plane before PASS may begin. */
   public static final double ALIGN_Y_TOLERANCE_METERS = 0.08;
