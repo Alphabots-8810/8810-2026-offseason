@@ -214,19 +214,6 @@
             }
           },
           {
-            "title": "CurrentShift",
-            "x": 0.0,
-            "y": 128.0,
-            "width": 256.0,
-            "height": 128.0,
-            "type": "Large Text Display",
-            "properties": {
-              "topic": "/AdvantageKit/RealOutputs/Shift/CurrentShift",
-              "period": 0.06,
-              "data_type": "string"
-            }
-          },
-          {
             "title": "RemainingTime",
             "x": 256.0,
             "y": 256.0,
@@ -327,10 +314,10 @@
             }
           },
           {
-            "title": "Is Our Shift ",
-            "x": 256.0,
-            "y": 512.0,
-            "width": 256.0,
+            "title": "HUB ACTIVE?",
+            "x": 768.0,
+            "y": 384.0,
+            "width": 128.0,
             "height": 128.0,
             "type": "Boolean Box",
             "properties": {
@@ -344,10 +331,10 @@
             }
           },
           {
-            "title": "Did We Win Auto",
-            "x": 512.0,
-            "y": 512.0,
-            "width": 256.0,
+            "title": "AUTO WIN?",
+            "x": 896.0,
+            "y": 384.0,
+            "width": 128.0,
             "height": 128.0,
             "type": "Boolean Box",
             "properties": {
@@ -383,8 +370,8 @@
           },
           {
             "title": "Auto Choices",
-            "x": 768.0,
-            "y": 384.0,
+            "x": 0.0,
+            "y": 128.0,
             "width": 256.0,
             "height": 128.0,
             "type": "ComboBox Chooser",
