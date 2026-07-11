@@ -78,6 +78,7 @@ public class ModuleIOSim implements ModuleIO {
         finiteOrZero(moduleSimulation.getDriveMotorAppliedVoltage().in(Volts));
     inputs.driveCurrentAmps =
         Math.abs(finiteOrZero(moduleSimulation.getDriveMotorSupplyCurrent().in(Amps)));
+    inputs.driveSupplyCurrentAmps = inputs.driveCurrentAmps;
 
     inputs.turnConnected = true;
     inputs.turnEncoderConnected = true;
@@ -89,6 +90,7 @@ public class ModuleIOSim implements ModuleIO {
         finiteOrZero(moduleSimulation.getSteerMotorAppliedVoltage().in(Volts));
     inputs.turnCurrentAmps =
         Math.abs(finiteOrZero(moduleSimulation.getSteerMotorSupplyCurrent().in(Amps)));
+    inputs.turnSupplyCurrentAmps = inputs.turnCurrentAmps;
 
     Angle[] cachedDrivePositions = moduleSimulation.getCachedDriveWheelFinalPositions();
     inputs.odometryTimestamps = makeOdometryTimestamps(cachedDrivePositions.length);

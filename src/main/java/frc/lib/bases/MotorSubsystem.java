@@ -12,6 +12,7 @@ import edu.wpi.first.wpilibj.Alert.AlertType;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.lib.io.MotorIO;
 import frc.lib.io.MotorIOInputsAutoLogged;
+import frc.lib.power.PowerManager;
 import org.littletonrobotics.junction.Logger;
 
 public class MotorSubsystem extends SubsystemBase {
@@ -38,6 +39,10 @@ public class MotorSubsystem extends SubsystemBase {
     io.updateInputs(inputs);
     Logger.processInputs(logKey, inputs);
     disconnectedAlert.set(!inputs.connected);
+
+    // Report energy usage
+    PowerManager.getInstance()
+        .reportCurrent(logKey, false, inputs.connected ? inputs.supplyCurrentAmps : 0.0);
   }
 
   public void setCurrent(double torqueCurrent) {

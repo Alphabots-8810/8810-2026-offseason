@@ -12,6 +12,7 @@ import static frc.robot.util.PhoenixUtil.*;
 import com.ctre.phoenix6.BaseStatusSignal;
 import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.CANdiConfiguration;
+import com.ctre.phoenix6.configs.CurrentLimitsConfigs;
 import com.ctre.phoenix6.configs.TalonFXSConfiguration;
 import com.ctre.phoenix6.controls.PositionVoltage;
 import com.ctre.phoenix6.controls.VelocityVoltage;
@@ -61,6 +62,12 @@ public class ModuleIOTalonFXS implements ModuleIO {
   private final StatusSignal<AngularVelocity> driveVelocity;
   private final StatusSignal<Voltage> driveAppliedVolts;
   private final StatusSignal<Current> driveCurrent;
+  private final StatusSignal<Current> driveSupplyCurrent;
+  private final StatusSignal<Current> turnSupplyCurrent;
+
+  // Floating drive current limits (PowerManager)
+  private final CurrentLimitsConfigs driveCurrentLimits;
+  private double appliedDriveSupplyLimitAmps;
 
   // Inputs from turn motor
   private final StatusSignal<Angle> turnAbsolutePosition;
@@ -104,6 +111,8 @@ public class ModuleIOTalonFXS implements ModuleIO {
             : InvertedValue.CounterClockwise_Positive;
     tryUntilOk(5, () -> driveTalon.getConfigurator().apply(driveConfig, 0.25));
     tryUntilOk(5, () -> driveTalon.setPosition(0.0, 0.25));
+    driveCurrentLimits = driveConfig.CurrentLimits;
+    appliedDriveSupplyLimitAmps = driveCurrentLimits.SupplyCurrentLimit;
 
     // Configure turn motor
     var turnConfig = new TalonFXSConfiguration();
@@ -163,6 +172,7 @@ public class ModuleIOTalonFXS implements ModuleIO {
     driveVelocity = driveTalon.getVelocity();
     driveAppliedVolts = driveTalon.getMotorVoltage();
     driveCurrent = driveTalon.getStatorCurrent();
+    driveSupplyCurrent = driveTalon.getSupplyCurrent();
 
     // Create turn status signals
     turnAbsolutePosition = candi.getPWM1Position();
@@ -171,6 +181,7 @@ public class ModuleIOTalonFXS implements ModuleIO {
     turnVelocity = turnTalon.getVelocity();
     turnAppliedVolts = turnTalon.getMotorVoltage();
     turnCurrent = turnTalon.getStatorCurrent();
+    turnSupplyCurrent = turnTalon.getSupplyCurrent();
 
     // Configure periodic frames
     BaseStatusSignal.setUpdateFrequencyForAll(
@@ -180,10 +191,12 @@ public class ModuleIOTalonFXS implements ModuleIO {
         driveVelocity,
         driveAppliedVolts,
         driveCurrent,
+        driveSupplyCurrent,
         turnAbsolutePosition,
         turnVelocity,
         turnAppliedVolts,
-        turnCurrent);
+        turnCurrent,
+        turnSupplyCurrent);
     ParentDevice.optimizeBusUtilizationForAll(driveTalon, turnTalon);
   }
 
@@ -191,9 +204,11 @@ public class ModuleIOTalonFXS implements ModuleIO {
   public void updateInputs(ModuleIOInputs inputs) {
     // Refresh all signals
     var driveStatus =
-        BaseStatusSignal.refreshAll(drivePosition, driveVelocity, driveAppliedVolts, driveCurrent);
+        BaseStatusSignal.refreshAll(
+            drivePosition, driveVelocity, driveAppliedVolts, driveCurrent, driveSupplyCurrent);
     var turnStatus =
-        BaseStatusSignal.refreshAll(turnPosition, turnVelocity, turnAppliedVolts, turnCurrent);
+        BaseStatusSignal.refreshAll(
+            turnPosition, turnVelocity, turnAppliedVolts, turnCurrent, turnSupplyCurrent);
     var turnEncoderStatus = BaseStatusSignal.refreshAll(turnAbsolutePosition);
 
     // Update drive inputs
@@ -202,6 +217,7 @@ public class ModuleIOTalonFXS implements ModuleIO {
     inputs.driveVelocityRadPerSec = Units.rotationsToRadians(driveVelocity.getValueAsDouble());
     inputs.driveAppliedVolts = driveAppliedVolts.getValueAsDouble();
     inputs.driveCurrentAmps = driveCurrent.getValueAsDouble();
+    inputs.driveSupplyCurrentAmps = driveSupplyCurrent.getValueAsDouble();
 
     // Update turn inputs
     inputs.turnConnected = turnConnectedDebounce.calculate(turnStatus.isOK());
@@ -211,6 +227,7 @@ public class ModuleIOTalonFXS implements ModuleIO {
     inputs.turnVelocityRadPerSec = Units.rotationsToRadians(turnVelocity.getValueAsDouble());
     inputs.turnAppliedVolts = turnAppliedVolts.getValueAsDouble();
     inputs.turnCurrentAmps = turnCurrent.getValueAsDouble();
+    inputs.turnSupplyCurrentAmps = turnSupplyCurrent.getValueAsDouble();
 
     // Update odometry inputs
     inputs.odometryTimestamps =
@@ -247,5 +264,16 @@ public class ModuleIOTalonFXS implements ModuleIO {
   @Override
   public void setTurnPosition(Rotation2d rotation) {
     turnTalon.setControl(positionVoltageRequest.withPosition(rotation.getRotations()));
+  }
+
+  @Override
+  public void applyDriveCurrentLimits(double supplyLimitAmps, double torqueCurrentLimitAmps) {
+    // Voltage control only, so the supply limit is sufficient (torque cap unused)
+    if (Math.abs(supplyLimitAmps - appliedDriveSupplyLimitAmps) >= 1.0) {
+      appliedDriveSupplyLimitAmps = supplyLimitAmps;
+      driveCurrentLimits.SupplyCurrentLimit = supplyLimitAmps;
+      driveCurrentLimits.SupplyCurrentLimitEnable = true;
+      driveTalon.getConfigurator().apply(driveCurrentLimits, 0.0);
+    }
   }
 }

@@ -40,6 +40,7 @@ import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
+import frc.lib.power.PowerManager;
 import frc.robot.Constants;
 import frc.robot.Constants.Mode;
 import frc.robot.FieldLayout;
@@ -191,6 +192,12 @@ public class Drive extends SubsystemBase {
         getPose().getTranslation().getDistance(new Translation2d(11.9, 4.035)));
 
     Logger.recordOutput("Odometry/DistanceToFerryTarget", calculateFerryTargetDistance());
+
+    // Apply the floating drive power budget (uses last loop's PowerManager result)
+    double driveModuleSupplyLimit = PowerManager.getInstance().getDriveModuleSupplyLimitAmps();
+    for (var module : modules) {
+      module.applyDrivePowerBudget(driveModuleSupplyLimit);
+    }
   }
 
   private double calculateFerryTargetDistance() {

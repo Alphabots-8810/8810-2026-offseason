@@ -10,12 +10,15 @@ package frc.robot.subsystems.drive;
 import com.ctre.phoenix6.configs.CANcoderConfiguration;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.swerve.SwerveModuleConstants;
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.Alert.AlertType;
+import edu.wpi.first.wpilibj.RobotController;
+import frc.lib.power.PowerManager;
 import org.littletonrobotics.junction.Logger;
 
 public class Module {
@@ -69,6 +72,34 @@ public class Module {
     driveDisconnectedAlert.set(!inputs.driveConnected);
     turnDisconnectedAlert.set(!inputs.turnConnected);
     turnEncoderDisconnectedAlert.set(!inputs.turnEncoderConnected);
+
+    // Report energy usage
+    PowerManager.getInstance()
+        .reportCurrent(
+            "DriveModule" + index + "/Drive",
+            true,
+            inputs.driveConnected ? inputs.driveSupplyCurrentAmps : 0.0);
+    PowerManager.getInstance()
+        .reportCurrent(
+            "DriveModule" + index + "/Turn",
+            false,
+            inputs.turnConnected ? inputs.turnSupplyCurrentAmps : 0.0);
+  }
+
+  /**
+   * Applies the floating drive power budget (battery-side amps) to the hardware. TorqueCurrentFOC
+   * control ignores supply current limits, so the budget is also converted to a torque (stator)
+   * current cap via the module's duty cycle: I_supply ≈ I_stator * duty. Duty is quantized upward
+   * into bands so the cap only changes on band crossings, limiting CAN config churn.
+   */
+  public void applyDrivePowerBudget(double supplyLimitAmps) {
+    double busVolts = Math.max(RobotController.getBatteryVoltage(), 6.0);
+    double duty = MathUtil.clamp(Math.abs(inputs.driveAppliedVolts) / busVolts, 0.0, 1.0);
+    duty = Math.max(0.2, Math.ceil(duty * 5.0) / 5.0);
+    double torqueCap =
+        MathUtil.clamp(supplyLimitAmps / duty, supplyLimitAmps, constants.SlipCurrent);
+    io.applyDriveCurrentLimits(supplyLimitAmps, torqueCap);
+    Logger.recordOutput("Drive/Module" + index + "/TorqueCurrentCapAmps", torqueCap);
   }
 
   /** Runs the module with the specified setpoint state. Mutates the state to optimize it. */

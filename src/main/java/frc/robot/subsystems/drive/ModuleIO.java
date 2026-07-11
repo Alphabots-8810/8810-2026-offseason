@@ -18,6 +18,7 @@ public interface ModuleIO {
     public double driveVelocityRadPerSec = 0.0;
     public double driveAppliedVolts = 0.0;
     public double driveCurrentAmps = 0.0;
+    public double driveSupplyCurrentAmps = 0.0;
 
     public boolean turnConnected = false;
     public boolean turnEncoderConnected = false;
@@ -26,6 +27,7 @@ public interface ModuleIO {
     public double turnVelocityRadPerSec = 0.0;
     public double turnAppliedVolts = 0.0;
     public double turnCurrentAmps = 0.0;
+    public double turnSupplyCurrentAmps = 0.0;
 
     public double[] odometryTimestamps = new double[] {};
     public double[] odometryDrivePositionsRad = new double[] {};
@@ -46,4 +48,12 @@ public interface ModuleIO {
 
   /** Run the turn motor to the specified rotation. */
   public default void setTurnPosition(Rotation2d rotation) {}
+
+  /**
+   * Updates the drive motor current limits from the floating power budget. The supply limit covers
+   * Voltage output modes; the torque-current cap covers TorqueCurrentFOC modes (which ignore
+   * supply/stator limits). Implementations should skip config writes when values are unchanged.
+   */
+  public default void applyDriveCurrentLimits(
+      double supplyLimitAmps, double torqueCurrentLimitAmps) {}
 }

@@ -9,6 +9,7 @@ package frc.robot;
 
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
+import frc.lib.power.PowerManager;
 import frc.robot.simulation.FuelSimulation;
 import frc.robot.simulation.MapleSimArena;
 import org.littletonrobotics.junction.LogFileUtil;
@@ -86,6 +87,9 @@ public class Robot extends LoggedRobot {
     // This must be called from the robot's periodic block in order for anything in
     // the Command-based framework to work.
     CommandScheduler.getInstance().run();
+
+    // Update the power budget after all subsystems have reported their current draw
+    PowerManager.getInstance().update();
 
     // Live dashboard preview of the block-auto selection.
     robotContainer.updateDashboardOutputs();
