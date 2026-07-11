@@ -35,8 +35,8 @@ import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
  * autonomous starts, so choosers can be changed on Elastic right up to the match:
  *
  * <ol>
- *   <li>Section 1 path (reset odometry to its start and launch immediately; the path's
- *       "IntakeDeploy" event marker inward-zeroes the intake deploy while driving, then intakes)
+ *   <li>Section 1 path (reset odometry to its start and launch immediately; the intake deploy
+ *       outward-zeroes alongside the path)
  *   <li>Timed shooting
  *   <li>Autopilot trench pass + Section 2 path, intaking from the moment the shot ends
  *   <li>Timed shooting

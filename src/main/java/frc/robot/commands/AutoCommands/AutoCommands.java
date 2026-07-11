@@ -10,15 +10,14 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import frc.robot.commands.AutopilotTrenchCommand.AutopilotTrenchCommand;
 import frc.robot.commands.IntakeCommand.IntakeCommand;
+import frc.robot.commands.IntakeDeployZeroCommand.IntakeDeployZeroCommand;
 import frc.robot.commands.ShootingCommand.Shooting;
 import frc.robot.subsystems.drive.Drive;
 import java.util.Optional;
 
 /**
- * Autonomous routines built in Java as a sequential command group.
- *
- * <p>{@code leftThreePieceAuto()} runs: Left1_path1 (intake via its "IntakeDeploy" event marker),
- * timed Shooting, Left1_path2 while intaking, timed Shooting, Left1_path3 while intaking.
+ * Building blocks for autonomous routines: Choreo path following, odometry reset, intake/shoot
+ * helpers. Assembled into full autos by {@link BlockAutoBuilder}.
  */
 public final class AutoCommands {
   private static final String PID_TEST_PATH = "PIDtest";
@@ -54,19 +53,21 @@ public final class AutoCommands {
     return Commands.runOnce(() -> Drive.mInstance.setPose(startPose), Drive.mInstance);
   }
 
-  /**
-   * Path followed while the intake deploys and runs the whole time, stopping when the path ends.
-   */
-  static Command pathWithIntake(String name) {
-    return followChoreo(name).raceWith(new IntakeCommand());
-  }
+  // Commented out 2026-07-11: unused — kept for reference in case a path+intake race without a
+  // trench pass is needed again.
+  //
+  // /**
+  //  * Path followed while the intake deploys and runs the whole time, stopping when the path
+  //  * ends.
+  //  */
+  // static Command pathWithIntake(String name) {
+  //   return followChoreo(name).raceWith(new IntakeCommand());
+  // }
 
   /**
    * Autopilot trench pass followed by a path, with the intake deployed and running across the whole
    * span — starting the moment the previous shot ends, so fuel sitting in and around the trench is
-   * collected too. The race ends with the path, stopping the roller/indexer. Only for paths WITHOUT
-   * an "IntakeDeploy" event marker: a marker would put the intake requirements on the path command
-   * and make the race a requirement conflict.
+   * collected too. The race ends with the path, stopping the roller/indexer.
    */
   static Command trenchThenPathWithIntake(String name) {
     return Commands.sequence(new AutopilotTrenchCommand(name), followChoreo(name))
@@ -75,17 +76,22 @@ public final class AutoCommands {
 
   /**
    * First path of an auto: reset odometry to the path's start pose, then follow it immediately — no
-   * stationary work before launch. The path's "IntakeZeroOut" Choreo event marker (bound in
-   * RobotContainer) outward-zeroes the intake deploy at t=0 while driving, leaving the arm on the
-   * deployed hard stop with the encoder reset. Note the marker moves the arm only — it does not run
-   * the roller/indexer.
+   * stationary work before launch. The intake deploy outward-zero runs alongside the path (path as
+   * deadline), leaving the arm on the deployed hard stop with the encoder reset. It moves the arm
+   * only — it does not run the roller/indexer.
    *
-   * <p>Do NOT race the path with an IntakeCommand here: the event marker already gives the path
-   * command the intake-deploy requirement, so a race would be a requirement conflict.
+   * <p>This zero used to be the path's t=0 "IntakeZeroOut" event marker bound to an EventTrigger,
+   * but EventTrigger commands are scheduled on the main scheduler, so the zero's IntakeDeploy
+   * requirement conflicted with the deferred block auto (which holds every subsystem) and cancelled
+   * the whole auto one cycle after the pose reset.
    */
   static Command firstPathWithIntake(String name) {
     PathPlannerPath path = loadChoreoPath(name);
-    return Commands.sequence(resetToStart(path), followChoreo(name));
+    return Commands.sequence(
+        resetToStart(path),
+        Commands.deadline(
+            followChoreo(name),
+            new IntakeDeployZeroCommand(IntakeDeployZeroCommand.Direction.OUTWARD)));
   }
 
   /** Timed shooting burst: aim + shoot for a fixed duration, then cleanly retract. */
@@ -105,45 +111,53 @@ public final class AutoCommands {
     }
   }
 
-  /**
-   * Left three-piece auto:
-   *
-   * <ol>
-   *   <li>Reset pose to Left1_path1 start, then follow it immediately; the path's "IntakeDeploy"
-   *       event marker inward-zeroes the intake deploy while driving, then deploys and intakes.
-   *   <li>Timed Shooting.
-   *   <li>Follow Left1_path2 while intaking.
-   *   <li>Timed Shooting.
-   *   <li>Follow Left1_path3 while intaking.
-   * </ol>
-   */
-  public static Command leftThreePieceAuto() {
-    try {
-      return buildLeftThreePieceAuto();
-    } catch (RuntimeException e) {
-      // A missing/renamed .traj must never crash the robot program: report it and hand the
-      // chooser a no-op so everything else (teleop, other autos) still works.
-      DriverStation.reportError("Left three-piece auto failed to load: " + e.getMessage(), false);
-      return Commands.print("Left three-piece auto unavailable: missing Choreo trajectory");
-    }
-  }
-
-  private static Command buildLeftThreePieceAuto() {
-    return Commands.sequence(
-        // 1) Reset pose and drive Left1_path1 immediately; its "IntakeDeploy" marker zeroes the
-        //    intake deploy while driving, then deploys and intakes.
-        firstPathWithIntake(AutoCommandsConstants.LEFT_PATH_1),
-
-        // 2) Timed shooting.
-        timedShoot(),
-
-        // 3) Left1_path2 while intaking.
-        followChoreo(AutoCommandsConstants.LEFT_PATH_2).raceWith(new IntakeCommand()),
-
-        // 4) Timed shooting.
-        timedShoot(),
-
-        // 5) Left1_path3 while intaking.
-        followChoreo(AutoCommandsConstants.LEFT_PATH_3).raceWith(new IntakeCommand()));
-  }
+  // Commented out 2026-07-11: the Left1_path1/2/3 Choreo trajectories were deleted when the
+  // Swap-trajectory BlockAutoBuilder scheme replaced this hand-built auto (commits b9b9530 and
+  // 69b2537), so this always failed to load at startup. Restore together with the LEFT_PATH_*
+  // constants in AutoCommandsConstants and the "Left Three-Piece" chooser option in
+  // RobotContainer if the .traj files are recreated.
+  //
+  // /**
+  //  * Left three-piece auto:
+  //  *
+  //  * <ol>
+  //  *   <li>Reset pose to Left1_path1 start, then follow it immediately; the path's
+  //  *       "IntakeDeploy" event marker inward-zeroes the intake deploy while driving, then
+  //  *       deploys and intakes.
+  //  *   <li>Timed Shooting.
+  //  *   <li>Follow Left1_path2 while intaking.
+  //  *   <li>Timed Shooting.
+  //  *   <li>Follow Left1_path3 while intaking.
+  //  * </ol>
+  //  */
+  // public static Command leftThreePieceAuto() {
+  //   try {
+  //     return buildLeftThreePieceAuto();
+  //   } catch (RuntimeException e) {
+  //     // A missing/renamed .traj must never crash the robot program: report it and hand the
+  //     // chooser a no-op so everything else (teleop, other autos) still works.
+  //     DriverStation.reportError(
+  //         "Left three-piece auto failed to load: " + e.getMessage(), false);
+  //     return Commands.print("Left three-piece auto unavailable: missing Choreo trajectory");
+  //   }
+  // }
+  //
+  // private static Command buildLeftThreePieceAuto() {
+  //   return Commands.sequence(
+  //       // 1) Reset pose and drive Left1_path1 immediately; its "IntakeDeploy" marker zeroes
+  //       //    the intake deploy while driving, then deploys and intakes.
+  //       firstPathWithIntake(AutoCommandsConstants.LEFT_PATH_1),
+  //
+  //       // 2) Timed shooting.
+  //       timedShoot(),
+  //
+  //       // 3) Left1_path2 while intaking.
+  //       followChoreo(AutoCommandsConstants.LEFT_PATH_2).raceWith(new IntakeCommand()),
+  //
+  //       // 4) Timed shooting.
+  //       timedShoot(),
+  //
+  //       // 5) Left1_path3 while intaking.
+  //       followChoreo(AutoCommandsConstants.LEFT_PATH_3).raceWith(new IntakeCommand()));
+  // }
 }

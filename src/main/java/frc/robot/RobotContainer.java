@@ -1,7 +1,6 @@
 package frc.robot;
 
 import com.pathplanner.lib.auto.AutoBuilder;
-import com.pathplanner.lib.events.EventTrigger;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
@@ -147,22 +146,17 @@ public class RobotContainer {
     // periodic reads the drive pose
     cameras = Cameras.mInstance;
 
-    // Choreo event-marker bindings. Must be registered before any path is loaded: PathPlanner
-    // resolves a marker's command from NamedCommands at .traj parse time. The Left1*/Right1* and
-    // PIDtest trajectories carry a single "IntakeZeroOut" marker at t=0: it outward-zeroes the
-    // intake deploy while the robot launches, leaving the arm on the deployed hard stop with the
-    // encoder reset. "IntakeZero" and "IntakeDeploy" are kept bound for any trajectory that still
-    // uses them. Event commands share the EventScheduler, where a later command cancels an earlier
-    // one with overlapping requirements.
-    new EventTrigger("IntakeZero")
-        .onTrue(new IntakeDeployZeroCommand(IntakeDeployZeroCommand.Direction.INWARD));
-    new EventTrigger("IntakeDeploy").onTrue(new IntakeCommand());
-    new EventTrigger("IntakeZeroOut")
-        .onTrue(new IntakeDeployZeroCommand(IntakeDeployZeroCommand.Direction.OUTWARD));
+    // No EventTrigger bindings for Choreo event markers: EventTrigger commands are scheduled on
+    // the main scheduler, so their subsystem requirements conflict with the deferred block auto
+    // (which holds every subsystem) and cancel the entire auto the moment a marker fires. The
+    // t=0 "IntakeZeroOut" work now runs inline in AutoCommands.firstPathWithIntake instead; any
+    // marker still present in a .traj simply fires into an unbound trigger.
 
     // Set up auto routines
     autoChooser = new LoggedDashboardChooser<>("Auto Choices", AutoBuilder.buildAutoChooser());
-    autoChooser.addOption("Left Three-Piece", AutoCommands.leftThreePieceAuto());
+    // Commented out 2026-07-11: leftThreePieceAuto's Choreo trajectories no longer exist — see
+    // the commented-out method in AutoCommands.
+    // autoChooser.addOption("Left Three-Piece", AutoCommands.leftThreePieceAuto());
     autoChooser.addOption("PID Path Only", AutoCommands.pidTestPathAuto());
 
     // Building-block auto: side + per-section path variants selected on the BlockAuto/* choosers,

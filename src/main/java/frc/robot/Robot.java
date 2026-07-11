@@ -9,6 +9,7 @@ package frc.robot;
 
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
+import frc.lib.rebuilt.ShiftUtil;
 import frc.robot.simulation.FuelSimulation;
 import frc.robot.simulation.MapleSimArena;
 import org.littletonrobotics.junction.LogFileUtil;
@@ -90,6 +91,14 @@ public class Robot extends LoggedRobot {
     // Live dashboard preview of the block-auto selection.
     robotContainer.updateDashboardOutputs();
 
+    // SHIFT tracking: dashboard outputs + AdvantageKit log for replay review.
+    ShiftUtil.publishShiftInfo();
+    ShiftUtil.ShiftInfo shiftInfo = ShiftUtil.getOfficialShiftInfo();
+    Logger.recordOutput("Shift/CurrentShift", shiftInfo.currentShift());
+    Logger.recordOutput("Shift/Active", shiftInfo.active());
+    Logger.recordOutput("Shift/ElapsedTime", shiftInfo.elapsedTime());
+    Logger.recordOutput("Shift/RemainingTime", shiftInfo.remainingTime());
+
     // Return to non-RT thread priority (do not modify the first argument)
     // Threads.setCurrentThreadPriority(false, 10);
   }
@@ -127,6 +136,9 @@ public class Robot extends LoggedRobot {
     if (autonomousCommand != null) {
       autonomousCommand.cancel();
     }
+
+    // Start the SHIFT timer at the beginning of teleop.
+    ShiftUtil.initialize();
   }
 
   /** This function is called periodically during operator control. */
