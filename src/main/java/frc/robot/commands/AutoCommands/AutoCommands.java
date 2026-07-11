@@ -21,6 +21,7 @@ import java.util.Optional;
  * timed Shooting, Left1_path2 while intaking, timed Shooting, Left1_path3 while intaking.
  */
 public final class AutoCommands {
+  private static final String PID_TEST_PATH = "PIDtest";
 
   private AutoCommands() {}
 
@@ -90,6 +91,17 @@ public final class AutoCommands {
   static Command timedShoot() {
     return new Shooting(false, () -> 0.0, () -> 0.0)
         .withTimeout(AutoCommandsConstants.SHOOTING_DURATION_SEC);
+  }
+
+  /** Runs only the PID test trajectory after resetting odometry to its start pose. */
+  public static Command pidTestPathAuto() {
+    try {
+      PathPlannerPath path = loadChoreoPath(PID_TEST_PATH);
+      return Commands.sequence(resetToStart(path), AutoBuilder.followPath(path));
+    } catch (RuntimeException e) {
+      DriverStation.reportError("PID test path failed to load: " + e.getMessage(), false);
+      return Commands.print("PID test path unavailable: missing Choreo trajectory");
+    }
   }
 
   /**

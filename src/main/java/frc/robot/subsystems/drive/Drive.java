@@ -129,7 +129,10 @@ public class Drive extends SubsystemBase {
         this::getChassisSpeeds,
         this::runVelocity,
         new PPHolonomicDriveController(
-            new PIDConstants(5.0, 0.0, 0.0), new PIDConstants(5.0, 0.0, 0.0)),
+            // Translation was oscillating around the trajectory at kP=5.0. Lower proportional
+            // correction plus light derivative damping produces a smoother response without
+            // adding integral windup. Rotation already tracks closely, so leave it unchanged.
+            new PIDConstants(10, 0.0, 0.2 ), new PIDConstants(5.0, 0.0, 0.0)),
         PP_CONFIG,
         () -> DriverStation.getAlliance().orElse(Alliance.Blue) == Alliance.Red,
         this);

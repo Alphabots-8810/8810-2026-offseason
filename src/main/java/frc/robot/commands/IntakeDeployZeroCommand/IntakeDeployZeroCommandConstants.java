@@ -1,8 +1,8 @@
 package frc.robot.commands.IntakeDeployZeroCommand;
 
 public final class IntakeDeployZeroCommandConstants {
-  public static final double OUTWARD_ZEROING_VOLTAGE = 3.0;
-  public static final double INWARD_ZEROING_VOLTAGE = -3.0;
+  public static final double OUTWARD_ZEROING_VOLTAGE = 4.0;
+  public static final double INWARD_ZEROING_VOLTAGE = -4.0;
   public static final double CURRENT_THRESHOLD = 40.0;
   public static final double OUTWARD_DEBOUNCE_TIME_SECONDS = 0.3;
   // Inward zeroing runs at auto start with the intake already seated on the stowed hard stop, so

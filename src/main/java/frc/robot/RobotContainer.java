@@ -1,7 +1,7 @@
 package frc.robot;
 
 import com.pathplanner.lib.auto.AutoBuilder;
-import com.pathplanner.lib.auto.NamedCommands;
+import com.pathplanner.lib.events.EventTrigger;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
@@ -156,13 +156,16 @@ public class RobotContainer {
     // cancels an earlier one with overlapping requirements — so a zero that never sees its current
     // spike is simply superseded by the deploy (encoder not reset, intake stays stowed) instead of
     // needing a timeout.
-    NamedCommands.registerCommand(
-        "IntakeZero", new IntakeDeployZeroCommand(IntakeDeployZeroCommand.Direction.INWARD));
-    NamedCommands.registerCommand("IntakeDeploy", new IntakeCommand());
+    new EventTrigger("IntakeZero")
+        .onTrue(new IntakeDeployZeroCommand(IntakeDeployZeroCommand.Direction.INWARD));
+    new EventTrigger("IntakeDeploy").onTrue(new IntakeCommand());
+    new EventTrigger("IntakeZeroOut")
+        .onTrue(new IntakeDeployZeroCommand(IntakeDeployZeroCommand.Direction.OUTWARD));
 
     // Set up auto routines
     autoChooser = new LoggedDashboardChooser<>("Auto Choices", AutoBuilder.buildAutoChooser());
     autoChooser.addOption("Left Three-Piece", AutoCommands.leftThreePieceAuto());
+    autoChooser.addOption("PID Path Only", AutoCommands.pidTestPathAuto());
 
     // Building-block auto: side + per-section path variants selected on the BlockAuto/* choosers,
     // assembled when autonomous starts.
@@ -205,7 +208,7 @@ public class RobotContainer {
     controller.povUp().whileTrue(new AutoTrenchCommand(() -> controller.getLeftY()));
     controller
         .povLeft()
-        .whileTrue(Commands.run(() -> drive.runVelocity(new ChassisSpeeds(0, 2, 0)), drive));
+        .onTrue(new IntakeDeployZeroCommand(IntakeDeployZeroCommand.Direction.INWARD));
     controller
         .povDown()
         .whileTrue(Commands.run(() -> drive.runVelocity(new ChassisSpeeds(-2, 0, 0)), drive));
