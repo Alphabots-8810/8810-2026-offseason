@@ -220,7 +220,7 @@ public class ShiftUtil {
 
   public static void publishShiftInfo() {
     SmartDashboard.putBoolean(allianceWinOverrideKey, getAllianceWinOverride().orElse(false));
-    boolean isRedAlliance = DriverStation.getAlliance().orElse(Alliance.Blue) == Alliance.Red;
+    // boolean isRedAlliance = DriverStation.getAlliance().orElse(Alliance.Blue) == Alliance.Red;
     // Color winningAllianceColor =
     //     switch (getFirstActiveAlliance()) {
     //       case Blue:

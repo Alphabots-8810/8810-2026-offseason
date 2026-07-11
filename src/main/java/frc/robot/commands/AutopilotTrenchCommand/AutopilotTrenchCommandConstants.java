@@ -2,7 +2,7 @@ package frc.robot.commands.AutopilotTrenchCommand;
 
 public final class AutopilotTrenchCommandConstants {
   /** Cruise speed through the trench. */
-  public static final double PASS_SPEED_METERS_PER_SEC = 4;
+  public static final double PASS_SPEED_METERS_PER_SEC = 5;
 
   public static final double MAX_ACCELERATION_METERS_PER_SEC_SQ = 9.0;
   public static final double MAX_JERK_METERS_PER_SEC_CUBED = 16.0;
@@ -18,8 +18,13 @@ public final class AutopilotTrenchCommandConstants {
   /** Margin past the trench's far exit face (along X) for the stage-2 exit target. */
   public static final double EXIT_MARGIN_METERS = 1.2;
 
-  /** Open-area distance before the entrance used to center the robot before driving straight in. */
-  public static final double ALIGNMENT_STANDOFF_METERS = 0.75;
+  /**
+   * Minimum straight runway kept before the point where alignment must be complete — the handoff
+   * plane on a near-side handoff, or the entrance target otherwise. The approach normally starts
+   * from wherever the shot left the robot (no backing up); this floor only applies when that point
+   * is already at or past the limit.
+   */
+  public static final double MIN_HANDOFF_RUNWAY_METERS = 0.3;
 
   public static final double ALIGN_X_TOLERANCE_METERS = 0.08;
 
