@@ -148,14 +148,12 @@ public class RobotContainer {
     cameras = Cameras.mInstance;
 
     // Choreo event-marker bindings. Must be registered before any path is loaded: PathPlanner
-    // resolves a marker's command from NamedCommands at .traj parse time. On the Left1*/Right1*
-    // trajectories: "IntakeZero" at t=0 inward-zeroes the intake deploy while the robot launches
-    // (it starts the match seated on the stowed hard stop, so the spike is quick even while
-    // driving); "IntakeDeploy" at ~0.55 s deploys and runs the intake, canceled (roller/indexer
-    // stopped) when the path ends. Event commands share the EventScheduler, where a later command
-    // cancels an earlier one with overlapping requirements — so a zero that never sees its current
-    // spike is simply superseded by the deploy (encoder not reset, intake stays stowed) instead of
-    // needing a timeout.
+    // resolves a marker's command from NamedCommands at .traj parse time. The Left1*/Right1* and
+    // PIDtest trajectories carry a single "IntakeZeroOut" marker at t=0: it outward-zeroes the
+    // intake deploy while the robot launches, leaving the arm on the deployed hard stop with the
+    // encoder reset. "IntakeZero" and "IntakeDeploy" are kept bound for any trajectory that still
+    // uses them. Event commands share the EventScheduler, where a later command cancels an earlier
+    // one with overlapping requirements.
     new EventTrigger("IntakeZero")
         .onTrue(new IntakeDeployZeroCommand(IntakeDeployZeroCommand.Direction.INWARD));
     new EventTrigger("IntakeDeploy").onTrue(new IntakeCommand());

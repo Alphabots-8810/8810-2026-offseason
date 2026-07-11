@@ -214,6 +214,5 @@
   "splits":[0]
  },
  "events":[
-   {"name":"IntakeZero", "from":{"target":0, "targetTimestamp":0.0, "offset":{"exp":"0 s", "val":0.0}}, "event":null},
-   {"name":"IntakeDeploy", "from":{"target":0, "targetTimestamp":0.0, "offset":{"exp":"0.4 s", "val":0.4}}, "event":null}]
+   {"name":"IntakeZeroOut", "from":{"target":0, "targetTimestamp":0.0, "offset":{"exp":"0 s", "val":0.0}}, "event":null}]
 }

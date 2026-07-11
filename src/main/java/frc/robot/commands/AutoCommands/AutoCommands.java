@@ -75,12 +75,13 @@ public final class AutoCommands {
 
   /**
    * First path of an auto: reset odometry to the path's start pose, then follow it immediately — no
-   * stationary work before launch. The path's "IntakeDeploy" Choreo event marker (registered on
-   * {@code NamedCommands} in RobotContainer) inward-zeroes the intake deploy while driving, then
-   * deploys and runs the intake.
+   * stationary work before launch. The path's "IntakeZeroOut" Choreo event marker (bound in
+   * RobotContainer) outward-zeroes the intake deploy at t=0 while driving, leaving the arm on the
+   * deployed hard stop with the encoder reset. Note the marker moves the arm only — it does not run
+   * the roller/indexer.
    *
    * <p>Do NOT race the path with an IntakeCommand here: the event marker already gives the path
-   * command the intake requirements, so a race would be a requirement conflict.
+   * command the intake-deploy requirement, so a race would be a requirement conflict.
    */
   static Command firstPathWithIntake(String name) {
     PathPlannerPath path = loadChoreoPath(name);
