@@ -31,6 +31,12 @@ public class IntakeCommand extends Command {
   }
 
   private void runIntake() {
+    if (FeedPath.mInstance.HopperFilled()) {
+      IntakeRoller.mInstance.setVelocityRotPerSec(95);
+    } else {
+      IntakeRoller.mInstance.setVelocityRotPerSec(IntakeCommandConstants.INTAKE_ROLLER_ROTPS);
+    }
+
     IntakeRoller.mInstance.setVelocityRotPerSec(IntakeCommandConstants.INTAKE_ROLLER_ROTPS);
     IntakeDeploy.mInstance.setPositionCentimeter(
         IntakeCommandConstants.INTAKE_DEPLOY_POSITION_CM,
@@ -42,12 +48,10 @@ public class IntakeCommand extends Command {
   private void updateIndexer() {
     if (FeedPath.mInstance.IndexerFilled()) {
       stopIndexing();
-    } else if (FeedPath.mInstance.HopperFilled()) {
-      runIndexing();
     } else {
-      stopIndexing();
+      runIndexing();
     }
-  }
+  } // changed
 
   private void runIndexing() {
     Indexer.mInstance.setV(IntakeCommandConstants.INDEXING_VOLTAGE);

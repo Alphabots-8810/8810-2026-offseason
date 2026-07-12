@@ -38,6 +38,17 @@ public class MotorSubsystem extends SubsystemBase {
     io.updateInputs(inputs);
     Logger.processInputs(logKey, inputs);
     disconnectedAlert.set(!inputs.connected);
+
+    // Named per-motor current folder for spotting asymmetrical load on multi-motor mechanisms
+    // (wrong follower invert, dragging bearing, brownout): healthy motors track each other.
+    Logger.recordOutput(logKey + "/Currents/TotalSupplyAmps", inputs.totalSupplyCurrentAmps);
+    for (int i = 0; i < inputs.perMotorSupplyCurrentAmps.length; i++) {
+      String motor = i == 0 ? "Leader" : "Follower" + i;
+      Logger.recordOutput(
+          logKey + "/Currents/" + motor + "/SupplyAmps", inputs.perMotorSupplyCurrentAmps[i]);
+      Logger.recordOutput(
+          logKey + "/Currents/" + motor + "/StatorAmps", inputs.perMotorStatorCurrentAmps[i]);
+    }
   }
 
   public void setCurrent(double torqueCurrent) {
@@ -62,6 +73,16 @@ public class MotorSubsystem extends SubsystemBase {
 
   public double getStatorCurrentAmps() {
     return inputs.statorCurrentAmps;
+  }
+
+  /** Sum of the supply currents of every motor in the mechanism (leader + followers). */
+  public double getTotalSupplyCurrentAmps() {
+    return inputs.totalSupplyCurrentAmps;
+  }
+
+  /** Per-motor supply currents, leader first then followers in config order. */
+  public double[] getPerMotorSupplyCurrentAmps() {
+    return inputs.perMotorSupplyCurrentAmps;
   }
 
   public void setV(double volts) {

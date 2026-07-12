@@ -122,6 +122,9 @@ public class MotorIOSim implements MotorIO {
     inputs.appliedVolts = appliedVolts;
     inputs.supplyCurrentAmps = Math.abs(sim.getCurrentDrawAmps());
     inputs.statorCurrentAmps = Math.abs(sim.getCurrentDrawAmps());
+    inputs.totalSupplyCurrentAmps = inputs.supplyCurrentAmps;
+    inputs.perMotorSupplyCurrentAmps = new double[] {inputs.supplyCurrentAmps};
+    inputs.perMotorStatorCurrentAmps = new double[] {inputs.statorCurrentAmps};
     inputs.tempCelsius = 25.0;
     inputs.controlMode = controlMode;
     inputs.voltageSetpoint = voltageSetpoint;
