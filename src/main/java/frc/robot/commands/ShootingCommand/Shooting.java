@@ -190,10 +190,10 @@ public class Shooting extends Command {
     Logger.recordOutput("Shooging/chassisStopped", isChassisStopped());
   }
 
-  /** The drum setpoint for a distance: sim-derived table times the kSpeed field knob. */
+  /** The drum setpoint for a distance: sim-derived table times the distance-dependent kSpeed. */
   private double drumSetpointRotps(double distance) {
     return ShootingConstants.distanceToShooterRotps.get(distance)
-        * ShootingConstants.kSpeedTunable.getAsDouble();
+        * ShootingConstants.kSpeed(distance);
   }
 
   /** Drive the flywheel and hood to the interpolated setpoints for the current distance. */
@@ -202,6 +202,7 @@ public class Shooting extends Command {
     Drum.mInstance.setVelocityRotPerSec(drumSetpointRotps(distance));
     Hood.mInstance.setPositionRot(ShootingConstants.distanceToHoodDeg.get(distance) / 360.);
     Logger.recordOutput("Shooging/drumSetpointRotps", drumSetpointRotps(distance));
+    Logger.recordOutput("Shooging/kSpeed", ShootingConstants.kSpeed(distance));
     Logger.recordOutput("Shooging/simDrumRotps", ShootingConstants.simDrumRotps(distance));
     // Sim-predicted hood angle (mechanism deg) for the current distance, next to the actual
     // table setpoint so field edits to the table are visible against the model.

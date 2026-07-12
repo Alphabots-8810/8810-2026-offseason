@@ -122,11 +122,28 @@ public final class ShootingConstants {
       Math.PI * DRUM_WHEEL_DIAMETER_M * DRUM_MOTOR_TO_WHEEL_RATIO;
 
   // THE field-calibration knob from the sim handoff, applied to the drum speed at use time
-  // (not baked into the table): balls landing SHORT -> raise, LONG -> lower. 1.0 = raw sim;
-  // 1.05 reproduces the two field-measured points (2.118 m -> 49.5 and 2.54 m -> 51.08
-  // motor rot/s, ratios 1.054 and 1.044 vs the sim).
-  public static final LoggedTunableNumber kSpeedTunable =
-      new LoggedTunableNumber("Shooting/kSpeed", 1.06);
+  // (not baked into the table): balls landing SHORT -> raise, LONG -> lower. 1.0 = raw sim.
+  // Field testing (2026-07-12) found the required correction GROWS with distance — the sim's
+  // fixed 0.18 slip and drag model under-predict the far shots — so the single knob became a
+  // two-point linear ramp: kSpeedNear at K_NEAR_DISTANCE_M, kSpeedFar at K_FAR_DISTANCE_M,
+  // linearly interpolated between and clamped flat outside. Same tuning rule per knob:
+  // balls SHORT at that distance -> raise, LONG -> lower.
+  public static final double K_NEAR_DISTANCE_M = 2.0;
+  public static final double K_FAR_DISTANCE_M = 3.0;
+  public static final LoggedTunableNumber kSpeedNearTunable =
+      new LoggedTunableNumber("Shooting/kSpeedNear", 1.07);
+  public static final LoggedTunableNumber kSpeedFarTunable =
+      new LoggedTunableNumber("Shooting/kSpeedFar", 1.08);
+
+  /** Distance-dependent drum speed correction: linear in distance, clamped at both ends. */
+  public static double kSpeed(double distanceMeters) {
+    double t =
+        MathUtil.clamp(
+            (distanceMeters - K_NEAR_DISTANCE_M) / (K_FAR_DISTANCE_M - K_NEAR_DISTANCE_M),
+            0.0,
+            1.0);
+    return MathUtil.interpolate(kSpeedNearTunable.getAsDouble(), kSpeedFarTunable.getAsDouble(), t);
+  }
 
   // Maple-sim projectile: launch speed (m/s) = drum target rot/s × this constant.
   public static final LoggedTunableNumber SimLaunchSpeedPerDrumRotps =
@@ -148,8 +165,9 @@ public final class ShootingConstants {
 
   static {
     // Both maps hold raw sim values (kSpeed = 1) at the same distance keys; Shooting
-    // multiplies the drum speed by Shooting/kSpeed at use time. Keys are robot-center
-    // distances; simDrumRotps/simHoodDeg subtract the exit offset internally.
+    // multiplies the drum speed by the distance-dependent kSpeed() ramp at use time. Keys
+    // are robot-center distances; simDrumRotps/simHoodDeg subtract the exit offset
+    // internally.
     distanceToShooterRotps.put(2.118, simDrumRotps(2.118)); // 46.97
     distanceToShooterRotps.put(2.54, simDrumRotps(2.54)); // 48.95
     distanceToShooterRotps.put(3.05, simDrumRotps(3.05)); // 51.39
