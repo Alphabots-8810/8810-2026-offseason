@@ -13,8 +13,6 @@ public final class ShootingConstants {
       new LoggedTunableNumber("Shooting/IntakeRollerRotps", 40);
   public static final LoggedTunableNumber FeederRotpsTunable =
       new LoggedTunableNumber("Shooting/FeederRotps", 80);
-  public static final LoggedTunableNumber ShooterOffset =
-      new LoggedTunableNumber("Shooting/ShooterOffset", 1.1);
 
   // Readiness tolerances used to decide when AIM is satisfied and we may shoot.
   public static final double SHOOTER_VELOCITY_TOLERANCE_ROTPS = 5.;
@@ -24,6 +22,12 @@ public final class ShootingConstants {
   // AIM -> SHOOT fires only after everything has been continuously ready for this long,
   // so a single lucky velocity sample inside the tolerance band cannot start the volley.
   public static final double READY_DEBOUNCE_SEC = 0.15;
+
+  // Left-stick deadband for repositioning during AIM. Matches teleop drive deadband.
+  public static final double DRIVE_DEADBAND = 0.03;
+
+  // Chassis must be below this measured linear speed (m/s) to count as stopped for shooting.
+  public static final double CHASSIS_STOP_VELOCITY_MPS = 0.08;
 
   // Inside this heading error the omega command is zeroed. Errors this small produce omega
   // commands below what the swerve can execute; static friction turns them into a ~5 Hz
@@ -44,10 +48,10 @@ public final class ShootingConstants {
   // Once SHOOT starts and the CANrange reports a long-distance reading, wait this long (seconds)
   // before retracting the intake.
   public static final LoggedTunableNumber RETRACT_DELAY_SEC =
-      new LoggedTunableNumber("Shooting/retract_delay", 0.1);
+      new LoggedTunableNumber("Shooting/retract_delay", 0.2);
   // Intake deploy position to retract to, in centimeters.
   public static final LoggedTunableNumber INTAKE_RETRACT_POSITION_CM =
-      new LoggedTunableNumber("Shooting/retract", 45);
+      new LoggedTunableNumber("Shooting/retract", 35);
 
   // Distance (meters, robot to HUB) -> shooter flywheel velocity (rotations / sec).
   public static final InterpolatingDoubleTreeMap distanceToShooterRotps =
@@ -80,6 +84,19 @@ public final class ShootingConstants {
   // in front of robot center (measured 2026-07-08). The robot aims straight at the HUB
   // while shooting, so the exit point is simply this much closer along the aim line.
   public static final double EXIT_FORWARD_OFFSET_M = 0.17641;
+
+  // Measured exit height used by Alpha Sim V3.1 and maple-sim projectile launch.
+  public static final double EXIT_HEIGHT_M = 0.4935;
+
+  // Feeder wheel diameter (m); perimeter comment in static block uses 120 mm.
+  public static final double FEEDER_WHEEL_DIAMETER_M = 0.120 / Math.PI;
+
+  /** Feeder surface travel per motor rotation (m). */
+  public static final double FEEDER_SURFACE_M_PER_MOTOR_ROT = Math.PI * FEEDER_WHEEL_DIAMETER_M;
+
+  // Approximate spacing between balls in the feed path (m); one feeder revolution is a
+  // reasonable first guess for sim launch cadence.
+  public static final double FEED_BALL_SPACING_M = 0.120;
 
   /** Sim-predicted hood mechanism angle (deg) for a robot-center distance to the HUB (m). */
   public static double simHoodDeg(double distanceMeters) {
@@ -131,8 +148,9 @@ public final class ShootingConstants {
 
   static {
     // Both maps hold raw sim values (kSpeed = 1) at the same distance keys; Shooting
-    // multiplies the drum speed by Shooting/kSpeed at use time. Keys are robot-center
-    // distances; simDrumRotps/simHoodDeg subtract the exit offset internally.
+    // multiplies the drum speed by the distance-dependent kSpeed() ramp at use time. Keys
+    // are robot-center distances; simDrumRotps/simHoodDeg subtract the exit offset
+    // internally.
     distanceToShooterRotps.put(2.118, simDrumRotps(2.118)); // 46.97
     distanceToShooterRotps.put(2.54, simDrumRotps(2.54)); // 48.95
     distanceToShooterRotps.put(3.05, simDrumRotps(3.05)); // 51.39
@@ -150,10 +168,6 @@ public final class ShootingConstants {
     distanceToHoodDeg.put(4.15, simHoodDeg(4.15)); // 19.62
     distanceToHoodDeg.put(4.55, simHoodDeg(4.55)); // 20.88
     distanceToHoodDeg.put(5.06, simHoodDeg(5.06)); // 22.07
-
-    distanceToFeedVelo.put(2., 100.);
-    distanceToFeedVelo.put(4., 100.);
-    distanceToFeedVelo.put(5., 80.);
   }
 
   private ShootingConstants() {}

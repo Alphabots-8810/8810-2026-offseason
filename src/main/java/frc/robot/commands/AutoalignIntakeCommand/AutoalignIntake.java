@@ -13,7 +13,7 @@ import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.Constants;
 import frc.robot.commands.IntakeCommand.IntakeCommandConstants;
-import frc.robot.simulation.MapleSimWorld;
+import frc.robot.simulation.FuelSimulation;
 import frc.robot.subsystems.FeedPath.FeedPath;
 import frc.robot.subsystems.Feeder.Feeder;
 import frc.robot.subsystems.Indexer.Indexer;
@@ -66,7 +66,7 @@ public class AutoalignIntake extends Command {
   @Override
   public void initialize() {
     if (Constants.currentMode == Constants.Mode.SIM) {
-      MapleSimWorld.setFuelIntakeRunning(true);
+      FuelSimulation.setIntakeRunning(true);
     }
     // Hold the current heading until the driver gives a motion direction.
     targetHeading = drive.getRotation();
@@ -140,7 +140,7 @@ public class AutoalignIntake extends Command {
   @Override
   public void end(boolean interrupted) {
     if (Constants.currentMode == Constants.Mode.SIM) {
-      MapleSimWorld.setFuelIntakeRunning(false);
+      FuelSimulation.setIntakeRunning(false);
     }
     roller.setV(0);
     drive.runVelocity(new ChassisSpeeds());
