@@ -250,7 +250,7 @@ public class RobotContainer {
     //             IntakeRoller.mInstance));
     controller.x().whileTrue(new Manual());
     controller
-        .rightTrigger()
+        .rightBumper()
         .onTrue(
             new InstantCommand(
                 () -> {
@@ -259,7 +259,7 @@ public class RobotContainer {
                   IntakeRoller.mInstance.setV(-3);
                 }));
     controller
-        .rightTrigger()
+        .rightBumper()
         .onFalse(
             new InstantCommand(
                 () -> {
@@ -319,6 +319,21 @@ public class RobotContainer {
         Set.of(drive, drum, feeder, hood, indexer, intakeDeploy, intakeRoller));
   }
 
+  private Command shootOrFerryCommand() {
+    return Commands.defer(
+        () ->
+            isInAllianceArea()
+                ? new Shooting(false, () -> -controller.getLeftY(), () -> -controller.getLeftX())
+                : new Ferry(),
+        Set.of(drive, drum, feeder, hood, indexer, intakeDeploy, intakeRoller));
+  }
+
+  private boolean isInAllianceArea() {
+    boolean isRed =
+        DriverStation.getAlliance().isPresent()
+            && DriverStation.getAlliance().get() == Alliance.Red;
+    return FieldLayout.isPoseInAllianceArea(isRed, drive.getPose());
+  }
   /**
    * Use this to pass the autonomous command to the main {@link Robot} class.
    *

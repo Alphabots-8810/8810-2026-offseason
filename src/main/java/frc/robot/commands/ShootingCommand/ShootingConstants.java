@@ -15,7 +15,7 @@ public final class ShootingConstants {
       new LoggedTunableNumber("Shooting/FeederRotps", 80);
 
   // Readiness tolerances used to decide when AIM is satisfied and we may shoot.
-  public static final double SHOOTER_VELOCITY_TOLERANCE_ROTPS = 1.;
+  public static final double SHOOTER_VELOCITY_TOLERANCE_ROTPS = 5.;
   public static final double HOOD_ANGLE_TOLERANCE_ROT = 0.02;
   public static final double AIM_ANGLE_TOLERANCE_RAD = Units.degreesToRadians(15.0);
 
@@ -122,26 +122,11 @@ public final class ShootingConstants {
       Math.PI * DRUM_WHEEL_DIAMETER_M * DRUM_MOTOR_TO_WHEEL_RATIO;
 
   // THE field-calibration knob from the sim handoff, applied to the drum speed at use time
-  // (not baked into the table): balls landing SHORT -> raise, LONG -> lower. 1.0 = raw sim.
-  // Field testing (2026-07-12) found the required correction GROWS with distance — the sim's
-  // fixed 0.18 slip and drag model under-predict the far shots — so the single knob became a
-  // two-point PURE linear line through (K_NEAR_DISTANCE_M, kSpeedNear) and
-  // (K_FAR_DISTANCE_M, kSpeedFar), extrapolated without clamping on both sides, so the
-  // defaults give 1.07 @ 2 m, 1.08 @ 3 m, 1.09 @ 4 m, 1.10 @ 5 m. Same tuning rule per
-  // knob: balls SHORT at that distance -> raise, LONG -> lower.
-  public static final double K_NEAR_DISTANCE_M = 2.0;
-  public static final double K_FAR_DISTANCE_M = 3.0;
-  public static final LoggedTunableNumber kSpeedNearTunable =
-      new LoggedTunableNumber("Shooting/kSpeedNear", 1.07);
-  public static final LoggedTunableNumber kSpeedFarTunable =
-      new LoggedTunableNumber("Shooting/kSpeedFar", 1.08);
-
-  /** Distance-dependent drum speed correction: pure linear in distance, no clamping. */
-  public static double kSpeed(double distanceMeters) {
-    double t = (distanceMeters - K_NEAR_DISTANCE_M) / (K_FAR_DISTANCE_M - K_NEAR_DISTANCE_M);
-    return kSpeedNearTunable.getAsDouble()
-        + (kSpeedFarTunable.getAsDouble() - kSpeedNearTunable.getAsDouble()) * t;
-  }
+  // (not baked into the table): balls landing SHORT -> raise, LONG -> lower. 1.0 = raw sim;
+  // 1.05 reproduces the two field-measured points (2.118 m -> 49.5 and 2.54 m -> 51.08
+  // motor rot/s, ratios 1.054 and 1.044 vs the sim).
+  public static final LoggedTunableNumber kSpeedTunable =
+      new LoggedTunableNumber("Shooting/kSpeed", 1.067);
 
   // Maple-sim projectile: launch speed (m/s) = drum target rot/s × this constant.
   public static final LoggedTunableNumber SimLaunchSpeedPerDrumRotps =
