@@ -13,18 +13,20 @@ import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
+import frc.robot.commands.AutoCommands.AutoCommands;
+import frc.robot.commands.AutoCommands.BlockAutoBuilder;
+import frc.robot.commands.AutoTrenchCommand.AutoTrenchCommand;
 import frc.robot.commands.AutoalignIntakeCommand.AutoalignIntake;
-import frc.robot.commands.DriveCommands.CornerPivotCommand;
-import frc.robot.commands.DriveCommands.CornerPivotCommand.PivotCorner;
 import frc.robot.commands.DriveCommands.DriveCommands;
 import frc.robot.commands.FerryCommand.Ferry;
 import frc.robot.commands.HoodZeroCommand.HoodZeroCommand;
 import frc.robot.commands.IntakeCommand.IntakeCommand;
-import frc.robot.commands.IntakeDeployOutwardZeroCommand.IntakeDeployOutwardZeroCommand;
+import frc.robot.commands.IntakeDeployZeroCommand.IntakeDeployZeroCommand;
 import frc.robot.commands.ManualCommand.Manual;
 import frc.robot.commands.ShootingCommand.Shooting;
 import frc.robot.generated.TunerConstants;
-import frc.robot.simulation.MapleSimWorld;
+import frc.robot.simulation.FuelSimulation;
+import frc.robot.simulation.MapleSimArena;
 import frc.robot.subsystems.Drum.Drum;
 import frc.robot.subsystems.FeedPath.FeedPath;
 import frc.robot.subsystems.Feeder.Feeder;
@@ -39,6 +41,7 @@ import frc.robot.subsystems.drive.GyroIOSim;
 import frc.robot.subsystems.drive.ModuleIO;
 import frc.robot.subsystems.drive.ModuleIOSim;
 import frc.robot.subsystems.drive.ModuleIOTalonFX;
+import frc.robot.subsystems.vision.Cameras;
 import frc.robot.util.LoggedTunableNumber;
 import java.util.Set;
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
@@ -65,11 +68,15 @@ public class RobotContainer {
   private final IntakeRoller intakeRoller = IntakeRoller.mInstance;
   private final LoggedTunableNumber retract = new LoggedTunableNumber("retract", 25);
 
+  // Created after the drive in the constructor because its cameras read the drive pose
+  private Cameras cameras = Cameras.mInstance;
+
   // Controller
   private final CommandXboxController controller = new CommandXboxController(0);
 
   // Dashboard inputs
   private final LoggedDashboardChooser<Command> autoChooser;
+  private final BlockAutoBuilder blockAutoBuilder = new BlockAutoBuilder();
 
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   public RobotContainer() {
@@ -107,9 +114,9 @@ public class RobotContainer {
         break;
 
       case SIM:
-        // Sim robot, instantiate MapleSim physics-backed IO implementations
-        MapleSimWorld mapleSimWorld = MapleSimWorld.getInstance();
-        var driveSimulation = mapleSimWorld.getDriveSimulation();
+        // Sim robot: maple-sim arena + AdvantageKit drive IO (official hardware-abstraction path)
+        var driveSimulation = MapleSimArena.getInstance().getDriveSimulation();
+        FuelSimulation.configure(driveSimulation);
         drive =
             new Drive(
                 new GyroIOSim(driveSimulation.getGyroSimulation()),
@@ -118,7 +125,7 @@ public class RobotContainer {
                 new ModuleIOSim(driveSimulation.getModules()[2]),
                 new ModuleIOSim(driveSimulation.getModules()[3]));
         Drive.mInstance = drive;
-        drive.setPose(mapleSimWorld.getRobotPose());
+        drive.setPose(MapleSimArena.getInstance().getRobotPose());
         break;
 
       default:
@@ -135,8 +142,26 @@ public class RobotContainer {
     }
     Drive.mInstance = drive;
 
+    // Initialize the camera subsystem after Drive.mInstance is set, since its
+    // periodic reads the drive pose
+    cameras = Cameras.mInstance;
+
+    // No EventTrigger bindings for Choreo event markers: EventTrigger commands are scheduled on
+    // the main scheduler, so their subsystem requirements conflict with the deferred block auto
+    // (which holds every subsystem) and cancel the entire auto the moment a marker fires. The
+    // t=0 "IntakeZeroOut" work now runs inline in AutoCommands.firstPathWithIntake instead; any
+    // marker still present in a .traj simply fires into an unbound trigger.
+
     // Set up auto routines
     autoChooser = new LoggedDashboardChooser<>("Auto Choices", AutoBuilder.buildAutoChooser());
+    // Commented out 2026-07-11: leftThreePieceAuto's Choreo trajectories no longer exist — see
+    // the commented-out method in AutoCommands.
+    // autoChooser.addOption("Left Three-Piece", AutoCommands.leftThreePieceAuto());
+    autoChooser.addOption("PID Path Only", AutoCommands.pidTestPathAuto());
+
+    // Building-block auto: side + per-section path variants selected on the BlockAuto/* choosers,
+    // assembled when autonomous starts.
+    autoChooser.addOption("Block Auto (dashboard)", blockAutoBuilder.buildCommand());
 
     // Set up SysId routines
     autoChooser.addOption(
@@ -172,13 +197,10 @@ public class RobotContainer {
             () -> -controller.getLeftY(),
             () -> -controller.getLeftX(),
             () -> -controller.getRightX()));
-    controller
-        .povUp()
-        .whileTrue(
-            new CornerPivotCommand(drive, PivotCorner.FRONT_LEFT, () -> -controller.getRightX()));
+    controller.povUp().whileTrue(new AutoTrenchCommand(() -> controller.getLeftY()));
     controller
         .povLeft()
-        .whileTrue(Commands.run(() -> drive.runVelocity(new ChassisSpeeds(0, 2, 0)), drive));
+        .onTrue(new IntakeDeployZeroCommand(IntakeDeployZeroCommand.Direction.INWARD));
     controller
         .povDown()
         .whileTrue(Commands.run(() -> drive.runVelocity(new ChassisSpeeds(-2, 0, 0)), drive));
@@ -227,7 +249,7 @@ public class RobotContainer {
     //             IntakeDeploy.mInstance,
     //             IntakeRoller.mInstance));
     controller.x().whileTrue(new Manual());
-    controller.rightTrigger().whileTrue(new shootOrFerryCommand());
+    controller.rightTrigger().whileTrue(shootOrFerryCommand());
     controller
         .rightBumper()
         .onTrue(
@@ -235,6 +257,7 @@ public class RobotContainer {
                 () -> {
                   Indexer.mInstance.setV(-3);
                   Feeder.mInstance.setV(-3);
+                  IntakeRoller.mInstance.setV(-3);
                 }));
     controller
         .rightBumper()
@@ -243,16 +266,14 @@ public class RobotContainer {
                 () -> {
                   Indexer.mInstance.setV(0);
                   Feeder.mInstance.setV(0);
+                  IntakeRoller.mInstance.setV(0);
                 }));
 
-    controller.y().onTrue(new HoodZeroCommand().alongWith(new IntakeDeployOutwardZeroCommand()));
     controller
-        .rightStick()
+        .y()
         .onTrue(
-            new AutoalignIntake(
-                () -> -controller.getLeftY(),
-                () -> -controller.getLeftX(),
-                () -> -controller.getRightX()));
+            new HoodZeroCommand()
+                .alongWith(new IntakeDeployZeroCommand(IntakeDeployZeroCommand.Direction.OUTWARD)));
     controller.leftTrigger(0.1).whileTrue(new IntakeCommand());
     controller
         .leftBumper()
@@ -261,12 +282,34 @@ public class RobotContainer {
                 () -> -controller.getLeftY(),
                 () -> -controller.getLeftX(),
                 () -> -controller.getRightX()));
-    controller.x().whileTrue(new Shooting(true));
+    controller
+        .a()
+        .whileTrue(new Shooting(true, () -> -controller.getLeftY(), () -> -controller.getLeftX()));
 
-    controller.a().whileTrue(new Ferry());
-    // controller.rightTrigger().whileTrue(new Shooting());
+    // Sim-only: Start button clears every ball on the field and resets the robot pose / intake
+    // stock. Ignored entirely on a real robot so the binding can stay in the code.
+    controller
+        .start()
+        .onTrue(
+            Commands.runOnce(
+                    () -> {
+                      if (Constants.currentMode == Constants.Mode.SIM
+                          && MapleSimArena.getInstance() != null) {
+                        MapleSimArena.getInstance().resetField();
+                      }
+                    })
+                .ignoringDisable(true));
   }
 
+  /** True when the robot is on its alliance side of the HUB. */
+  private boolean isInAllianceArea() {
+    boolean isRed =
+        DriverStation.getAlliance().isPresent()
+            && DriverStation.getAlliance().get() == Alliance.Red;
+    return FieldLayout.isPoseInAllianceArea(isRed, drive.getPose());
+  }
+
+  /** Alliance side of the HUB: shoot at the HUB; neutral side: ferry. */
   private Command shootOrFerryCommand() {
     return Commands.defer(
         () ->
@@ -275,13 +318,6 @@ public class RobotContainer {
                 : new Ferry(),
         Set.of(drive, drum, feeder, hood, indexer, intakeDeploy, intakeRoller));
   }
-
-  private boolean isInAllianceArea() {
-    boolean isRed =
-        DriverStation.getAlliance().isPresent()
-            && DriverStation.getAlliance().get() == Alliance.Red;
-    return FieldLayout.isPoseInAllianceArea(isRed, drive.getPose());
-  }
   /**
    * Use this to pass the autonomous command to the main {@link Robot} class.
    *
@@ -289,5 +325,10 @@ public class RobotContainer {
    */
   public Command getAutonomousCommand() {
     return autoChooser.get();
+  }
+
+  /** Dashboard outputs refreshed every loop (block-auto selection table, etc.). */
+  public void updateDashboardOutputs() {
+    blockAutoBuilder.publishSelection();
   }
 }

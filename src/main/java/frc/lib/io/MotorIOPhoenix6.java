@@ -203,6 +203,11 @@ public class MotorIOPhoenix6 implements MotorIO {
   private final StatusSignal<Current> supplyCurrent;
   private final StatusSignal<Current> statorCurrent;
   private final StatusSignal<Temperature> tempCelsius;
+  // Follower currents are polled too: a follower fighting the leader (wrong invert, dragging
+  // bearing, brownout) is invisible in the leader's current alone.
+  private final List<StatusSignal<Current>> followerSupplyCurrents = new ArrayList<>();
+  private final List<StatusSignal<Current>> followerStatorCurrents = new ArrayList<>();
+  private final BaseStatusSignal[] allSignals;
 
   private final Debouncer connectedDebounce = new Debouncer(0.5, Debouncer.DebounceType.kFalling);
 
@@ -269,9 +274,18 @@ public class MotorIOPhoenix6 implements MotorIO {
     supplyCurrent = talon.getSupplyCurrent();
     statorCurrent = talon.getStatorCurrent();
     tempCelsius = talon.getDeviceTemp();
+    for (TalonFX follower : followers) {
+      followerSupplyCurrents.add(follower.getSupplyCurrent());
+      followerStatorCurrents.add(follower.getStatorCurrent());
+    }
 
-    BaseStatusSignal.setUpdateFrequencyForAll(
-        50.0, position, velocity, appliedVolts, supplyCurrent, statorCurrent, tempCelsius);
+    var signals =
+        new ArrayList<BaseStatusSignal>(
+            List.of(position, velocity, appliedVolts, supplyCurrent, statorCurrent, tempCelsius));
+    signals.addAll(followerSupplyCurrents);
+    signals.addAll(followerStatorCurrents);
+    allSignals = signals.toArray(BaseStatusSignal[]::new);
+    BaseStatusSignal.setUpdateFrequencyForAll(50.0, allSignals);
 
     var devices = new ArrayList<ParentDevice>();
     devices.add(talon);
@@ -281,9 +295,7 @@ public class MotorIOPhoenix6 implements MotorIO {
 
   @Override
   public void updateInputs(MotorIOInputs inputs) {
-    var status =
-        BaseStatusSignal.refreshAll(
-            position, velocity, appliedVolts, supplyCurrent, statorCurrent, tempCelsius);
+    var status = BaseStatusSignal.refreshAll(allSignals);
 
     inputs.connected = connectedDebounce.calculate(status.isOK());
     inputs.positionRad = Units.rotationsToRadians(position.getValueAsDouble());
@@ -291,6 +303,18 @@ public class MotorIOPhoenix6 implements MotorIO {
     inputs.appliedVolts = appliedVolts.getValueAsDouble();
     inputs.supplyCurrentAmps = supplyCurrent.getValueAsDouble();
     inputs.statorCurrentAmps = statorCurrent.getValueAsDouble();
+    inputs.perMotorSupplyCurrentAmps = new double[1 + followers.size()];
+    inputs.perMotorStatorCurrentAmps = new double[1 + followers.size()];
+    inputs.perMotorSupplyCurrentAmps[0] = inputs.supplyCurrentAmps;
+    inputs.perMotorStatorCurrentAmps[0] = inputs.statorCurrentAmps;
+    double totalSupply = inputs.supplyCurrentAmps;
+    for (int i = 0; i < followers.size(); i++) {
+      double followerSupply = followerSupplyCurrents.get(i).getValueAsDouble();
+      inputs.perMotorSupplyCurrentAmps[1 + i] = followerSupply;
+      inputs.perMotorStatorCurrentAmps[1 + i] = followerStatorCurrents.get(i).getValueAsDouble();
+      totalSupply += followerSupply;
+    }
+    inputs.totalSupplyCurrentAmps = totalSupply;
     inputs.tempCelsius = tempCelsius.getValueAsDouble();
     inputs.controlMode = controlMode;
     inputs.voltageSetpoint = voltageSetpoint;
