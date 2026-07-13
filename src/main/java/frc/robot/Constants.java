@@ -8,6 +8,7 @@
 package frc.robot;
 
 import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.math.interpolation.InterpolatingDoubleTreeMap;
 import edu.wpi.first.wpilibj.RobotBase;
 
 /**
@@ -18,6 +19,24 @@ import edu.wpi.first.wpilibj.RobotBase;
 public final class Constants {
   public static final Mode simMode = Mode.SIM;
   public static final Mode currentMode = RobotBase.isReal() ? Mode.REAL : simMode;
+
+  public static final class VisionConstants {
+    // TA (target area, 0-100) maps to XY std dev in meters. Larger TA = closer tag.
+    public static final InterpolatingDoubleTreeMap taToXYStdDevMeters =
+        new InterpolatingDoubleTreeMap();
+
+    static {
+      taToXYStdDevMeters.put(0.0, 4.00); // Barely visible, almost no trust
+      taToXYStdDevMeters.put(0.5, 0.50);
+      taToXYStdDevMeters.put(1.0, 0.30);
+      taToXYStdDevMeters.put(3.0, 0.10); // Close tag, high trust
+    }
+
+    // Heading is always locked to the gyro, so give rotation a huge std dev.
+    public static final double thetaStdDevRad = 99999999.0;
+
+    private VisionConstants() {}
+  }
 
   public static enum Mode {
     /** Running on a real robot. */

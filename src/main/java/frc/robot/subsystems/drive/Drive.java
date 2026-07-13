@@ -20,6 +20,7 @@ import edu.wpi.first.hal.FRCNetComm.tInstances;
 import edu.wpi.first.hal.FRCNetComm.tResourceType;
 import edu.wpi.first.hal.HAL;
 import edu.wpi.first.math.Matrix;
+import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -37,8 +38,6 @@ import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.Alert.AlertType;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
-import edu.wpi.first.wpilibj.smartdashboard.Field2d;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
@@ -47,7 +46,8 @@ import frc.robot.Constants.Mode;
 import frc.robot.FieldLayout;
 import frc.robot.commands.FerryCommand.FerryConstants;
 import frc.robot.generated.TunerConstants;
-import frc.robot.simulation.MapleSimArena;
+import frc.robot.simulation.MapleSimWorld;
+import frc.robot.util.LimelightHelpers;
 import frc.robot.util.LocalADStarAK;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -106,10 +106,6 @@ public class Drive extends SubsystemBase {
   private SwerveDrivePoseEstimator poseEstimator =
       new SwerveDrivePoseEstimator(kinematics, rawGyroRotation, lastModulePositions, Pose2d.kZero);
 
-  // Field2d sendable so dashboards (Elastic) can show the robot pose on a field widget;
-  // AdvantageKit's Odometry/Robot output is a struct that Elastic's field widget can't read.
-  private final Field2d dashboardField = new Field2d();
-
   public Drive(
       GyroIO gyroIO,
       ModuleIO flModuleIO,
@@ -128,8 +124,6 @@ public class Drive extends SubsystemBase {
     // Start odometry thread
     PhoenixOdometryThread.getInstance().start();
 
-    SmartDashboard.putData("Field", dashboardField);
-
     // Configure AutoBuilder for PathPlanner
     AutoBuilder.configure(
         this::getPose,
@@ -137,10 +131,7 @@ public class Drive extends SubsystemBase {
         this::getChassisSpeeds,
         this::runVelocity,
         new PPHolonomicDriveController(
-            // Translation was oscillating around the trajectory at kP=5.0. Lower proportional
-            // correction plus light derivative damping produces a smoother response without
-            // adding integral windup. Rotation already tracks closely, so leave it unchanged.
-            new PIDConstants(10, 0.0, 0.2), new PIDConstants(5.0, 0.0, 0.0)),
+            new PIDConstants(5.0, 0.0, 0.0), new PIDConstants(5.0, 0.0, 0.0)),
         PP_CONFIG,
         () -> DriverStation.getAlliance().orElse(Alliance.Blue) == Alliance.Red,
         this);
@@ -190,20 +181,48 @@ public class Drive extends SubsystemBase {
     }
 
     // Update odometry
-    if (Constants.currentMode != Mode.SIM) {
-      updateOdometry();
+    double[] sampleTimestamps =
+        modules[0].getOdometryTimestamps(); // All signals are sampled together
+    int sampleCount = sampleTimestamps.length;
+    for (int i = 0; i < sampleCount; i++) {
+      // Read wheel positions and deltas from each module
+      SwerveModulePosition[] modulePositions = new SwerveModulePosition[4];
+      SwerveModulePosition[] moduleDeltas = new SwerveModulePosition[4];
+      for (int moduleIndex = 0; moduleIndex < 4; moduleIndex++) {
+        modulePositions[moduleIndex] = modules[moduleIndex].getOdometryPositions()[i];
+        moduleDeltas[moduleIndex] =
+            new SwerveModulePosition(
+                modulePositions[moduleIndex].distanceMeters
+                    - lastModulePositions[moduleIndex].distanceMeters,
+                modulePositions[moduleIndex].angle);
+        lastModulePositions[moduleIndex] = modulePositions[moduleIndex];
+      }
+
+      // Update gyro angle
+      if (gyroInputs.connected) {
+        // Use the real gyro angle
+        rawGyroRotation = gyroInputs.odometryYawPositions[i];
+      } else {
+        // Use the angle delta from the kinematics and module deltas
+        Twist2d twist = kinematics.toTwist2d(moduleDeltas);
+        rawGyroRotation = rawGyroRotation.plus(new Rotation2d(twist.dtheta));
+      }
+
+      // Apply update
+      poseEstimator.updateWithTime(sampleTimestamps[i], rawGyroRotation, modulePositions);
     }
 
     // Update gyro alert
     gyroDisconnectedAlert.set(!gyroInputs.connected && Constants.currentMode != Mode.SIM);
+
+    // Update vision — runs after odometry so estimates land on a resolved pose.
+    updatePoseWithLimelightMegaTag2("limelight");
 
     Logger.recordOutput(
         "Odometry/DistanceToHub",
         getPose().getTranslation().getDistance(new Translation2d(11.9, 4.035)));
 
     Logger.recordOutput("Odometry/DistanceToFerryTarget", calculateFerryTargetDistance());
-
-    dashboardField.setRobotPose(getPose());
   }
 
   private double calculateFerryTargetDistance() {
@@ -379,59 +398,48 @@ public class Drive extends SubsystemBase {
     return getPose().getRotation();
   }
 
-  /**
-   * Resets the current odometry pose. Keeps rawGyroRotation untouched so the pose estimator records
-   * the offset between the physical gyro reading and the new heading; overwriting it would zero the
-   * offset and let the next raw gyro sample revert the reset.
-   */
+  /** Resets the current odometry pose. */
   public void setPose(Pose2d pose) {
     poseEstimator.resetPosition(rawGyroRotation, getModulePositions(), pose);
-    if (Constants.currentMode == Mode.SIM) {
-      rawGyroRotation = pose.getRotation();
-      MapleSimArena.getInstance().setRobotPose(pose);
-    }
+    MapleSimWorld.setRobotPose(pose);
   }
 
-  private void updateOdometry() {
-    double[] sampleTimestamps =
-        modules[0].getOdometryTimestamps(); // All signals are sampled together
-    int sampleCount = sampleTimestamps.length;
-    for (int i = 0; i < sampleCount; i++) {
-      // Read wheel positions and deltas from each module
-      SwerveModulePosition[] modulePositions = new SwerveModulePosition[4];
-      SwerveModulePosition[] moduleDeltas = new SwerveModulePosition[4];
-      for (int moduleIndex = 0; moduleIndex < 4; moduleIndex++) {
-        modulePositions[moduleIndex] = modules[moduleIndex].getOdometryPositions()[i];
-        moduleDeltas[moduleIndex] =
-            new SwerveModulePosition(
-                modulePositions[moduleIndex].distanceMeters
-                    - lastModulePositions[moduleIndex].distanceMeters,
-                modulePositions[moduleIndex].angle);
-        lastModulePositions[moduleIndex] = modulePositions[moduleIndex];
-      }
+  private void updatePoseWithLimelightMegaTag2(String llName) {
+    var speeds = getChassisSpeeds();
 
-      // Update gyro angle
-      if (gyroInputs.connected) {
-        // Use the real gyro angle
-        rawGyroRotation = gyroInputs.odometryYawPositions[i];
-      } else {
-        // Use the angle delta from the kinematics and module deltas
-        Twist2d twist = kinematics.toTwist2d(moduleDeltas);
-        rawGyroRotation = rawGyroRotation.plus(new Rotation2d(twist.dtheta));
-      }
+    LimelightHelpers.SetRobotOrientation(
+        llName,
+        getRotation().getDegrees(),
+        Math.toDegrees(speeds.omegaRadiansPerSecond),
+        0.0,
+        0.0,
+        0.0,
+        0.0);
 
-      // Apply update
-      poseEstimator.updateWithTime(sampleTimestamps[i], rawGyroRotation, modulePositions);
+    LimelightHelpers.PoseEstimate est =
+        LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2(llName);
+
+    if (est == null
+        || est.tagCount <= 0
+        || Math.hypot(speeds.vxMetersPerSecond, speeds.vyMetersPerSecond) > 2.0
+        || Math.abs(speeds.omegaRadiansPerSecond) > 3.0) {
+      return;
     }
-  }
 
-  /**
-   * Resets odometry to match the maple-sim physics pose. Does not move the physics body — use
-   * {@link #setPose(Pose2d)} when teleporting both.
-   */
-  public void setPoseFromSimulation(Pose2d pose) {
-    rawGyroRotation = pose.getRotation();
-    poseEstimator.resetPosition(rawGyroRotation, getModulePositions(), pose);
+    double ta = LimelightHelpers.getTA(llName);
+    double xyStdDev = Constants.VisionConstants.taToXYStdDevMeters.get(Math.max(0.0, ta));
+
+    Pose2d visionPose = new Pose2d(est.pose.getTranslation(), getRotation());
+
+    poseEstimator.addVisionMeasurement(
+        visionPose,
+        est.timestampSeconds,
+        VecBuilder.fill(xyStdDev, xyStdDev, Constants.VisionConstants.thetaStdDevRad));
+
+    Logger.recordOutput("Vision/" + llName + "/TagCount", est.tagCount);
+    Logger.recordOutput("Vision/" + llName + "/TA", ta);
+    Logger.recordOutput("Vision/" + llName + "/XYStdDev", xyStdDev);
+    Logger.recordOutput("Vision/" + llName + "/Pose", visionPose);
   }
 
   /** Adds a new timestamped vision measurement. */

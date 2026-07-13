@@ -26,16 +26,6 @@ public interface MotorIO {
     public double appliedVolts = 0.0;
     public double supplyCurrentAmps = 0.0;
     public double statorCurrentAmps = 0.0;
-    /** Sum of the supply currents of every motor in the mechanism (leader + followers). */
-    public double totalSupplyCurrentAmps = 0.0;
-    /**
-     * Per-motor currents, leader first then followers in config order. On a healthy multi-motor
-     * mechanism these track each other; a spread points at an asymmetrical mechanical or electrical
-     * problem.
-     */
-    public double[] perMotorSupplyCurrentAmps = new double[] {};
-
-    public double[] perMotorStatorCurrentAmps = new double[] {};
     public double tempCelsius = 0.0;
 
     public ControlMode controlMode = ControlMode.DISABLED;

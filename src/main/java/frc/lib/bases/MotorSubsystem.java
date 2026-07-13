@@ -38,17 +38,6 @@ public class MotorSubsystem extends SubsystemBase {
     io.updateInputs(inputs);
     Logger.processInputs(logKey, inputs);
     disconnectedAlert.set(!inputs.connected);
-
-    // Named per-motor current folder for spotting asymmetrical load on multi-motor mechanisms
-    // (wrong follower invert, dragging bearing, brownout): healthy motors track each other.
-    Logger.recordOutput(logKey + "/Currents/TotalSupplyAmps", inputs.totalSupplyCurrentAmps);
-    for (int i = 0; i < inputs.perMotorSupplyCurrentAmps.length; i++) {
-      String motor = i == 0 ? "Leader" : "Follower" + i;
-      Logger.recordOutput(
-          logKey + "/Currents/" + motor + "/SupplyAmps", inputs.perMotorSupplyCurrentAmps[i]);
-      Logger.recordOutput(
-          logKey + "/Currents/" + motor + "/StatorAmps", inputs.perMotorStatorCurrentAmps[i]);
-    }
   }
 
   public void setCurrent(double torqueCurrent) {
@@ -63,26 +52,8 @@ public class MotorSubsystem extends SubsystemBase {
     return inputs.velocityRadPerSec / (2.0 * Math.PI);
   }
 
-  public double getVelocitySetpointRotPerSec() {
-    return inputs.velocitySetpointRadPerSec / (2.0 * Math.PI);
-  }
-
-  public double getPositionSetpointRot() {
-    return inputs.positionSetpointRad / (2.0 * Math.PI);
-  }
-
   public double getStatorCurrentAmps() {
     return inputs.statorCurrentAmps;
-  }
-
-  /** Sum of the supply currents of every motor in the mechanism (leader + followers). */
-  public double getTotalSupplyCurrentAmps() {
-    return inputs.totalSupplyCurrentAmps;
-  }
-
-  /** Per-motor supply currents, leader first then followers in config order. */
-  public double[] getPerMotorSupplyCurrentAmps() {
-    return inputs.perMotorSupplyCurrentAmps;
   }
 
   public void setV(double volts) {
@@ -105,23 +76,6 @@ public class MotorSubsystem extends SubsystemBase {
 
   public void setEncoderPositionRot(double positionRot) {
     io.setEncoderPositionRot(positionRot);
-  }
-
-  /**
-   * True when the mechanism is within tolerance of the active closed-loop setpoint. Compares
-   * position (rot) in POSITION mode and velocity (rot/sec) in VELOCITY mode; false in open-loop
-   * modes (VOLTAGE, CURRENT, DISABLED) where no setpoint exists.
-   */
-  public boolean isAtSetpoint(double toleranceRotOrRotPerSec) {
-    switch (inputs.controlMode) {
-      case POSITION:
-        return Math.abs(getPositionRot() - getPositionSetpointRot()) < toleranceRotOrRotPerSec;
-      case VELOCITY:
-        return Math.abs(getVelocityRotPerSec() - getVelocitySetpointRotPerSec())
-            < toleranceRotOrRotPerSec;
-      default:
-        return false;
-    }
   }
 
   public void stop() {

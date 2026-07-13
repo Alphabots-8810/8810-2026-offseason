@@ -2,7 +2,7 @@ package frc.robot.commands.IntakeCommand;
 
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.Constants;
-import frc.robot.simulation.FuelSimulation;
+import frc.robot.simulation.MapleSimWorld;
 import frc.robot.subsystems.FeedPath.FeedPath;
 import frc.robot.subsystems.Feeder.Feeder;
 import frc.robot.subsystems.Indexer.Indexer;
@@ -18,7 +18,7 @@ public class IntakeCommand extends Command {
   @Override
   public void initialize() {
     if (Constants.currentMode == Constants.Mode.SIM) {
-      FuelSimulation.setIntakeRunning(true);
+      MapleSimWorld.setFuelIntakeRunning(true);
     }
     runIntake();
     updateIndexer();
@@ -31,12 +31,6 @@ public class IntakeCommand extends Command {
   }
 
   private void runIntake() {
-    if (FeedPath.mInstance.HopperFilled()) {
-      IntakeRoller.mInstance.setVelocityRotPerSec(95);
-    } else {
-      IntakeRoller.mInstance.setVelocityRotPerSec(IntakeCommandConstants.INTAKE_ROLLER_ROTPS);
-    }
-
     IntakeRoller.mInstance.setVelocityRotPerSec(IntakeCommandConstants.INTAKE_ROLLER_ROTPS);
     IntakeDeploy.mInstance.setPositionCentimeter(
         IntakeCommandConstants.INTAKE_DEPLOY_POSITION_CM,
@@ -48,10 +42,12 @@ public class IntakeCommand extends Command {
   private void updateIndexer() {
     if (FeedPath.mInstance.IndexerFilled()) {
       stopIndexing();
-    } else {
+    } else if (FeedPath.mInstance.HopperFilled()) {
       runIndexing();
+    } else {
+      stopIndexing();
     }
-  } // changed
+  }
 
   private void runIndexing() {
     Indexer.mInstance.setV(IntakeCommandConstants.INDEXING_VOLTAGE);
@@ -69,7 +65,7 @@ public class IntakeCommand extends Command {
   @Override
   public void end(boolean interrupted) {
     if (Constants.currentMode == Constants.Mode.SIM) {
-      FuelSimulation.setIntakeRunning(false);
+      MapleSimWorld.setFuelIntakeRunning(false);
     }
     IntakeRoller.mInstance.stop();
     stopIndexing();

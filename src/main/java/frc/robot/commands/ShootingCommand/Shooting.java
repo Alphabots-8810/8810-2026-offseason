@@ -4,9 +4,7 @@ import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.math.filter.Debouncer.DebounceType;
-import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.geometry.Transform2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
@@ -17,7 +15,6 @@ import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.Constants;
 import frc.robot.subsystems.Drum.Drum;
 import frc.robot.subsystems.Drum.DrumConstants;
-import frc.robot.subsystems.FeedPath.FeedPath;
 import frc.robot.subsystems.Feeder.Feeder;
 import frc.robot.subsystems.Hood.Hood;
 import frc.robot.subsystems.Indexer.Indexer;
@@ -25,7 +22,6 @@ import frc.robot.subsystems.IntakeDeploy.IntakeDeploy;
 import frc.robot.subsystems.IntakeDeploy.IntakeDeployConstants;
 import frc.robot.subsystems.IntakeRoller.IntakeRoller;
 import frc.robot.subsystems.drive.Drive;
-import java.util.function.DoubleSupplier;
 import org.littletonrobotics.junction.Logger;
 
 public class Shooting extends Command {
@@ -56,12 +52,7 @@ public class Shooting extends Command {
   // Requires isReadyToShoot() to hold continuously before AIM -> SHOOT (recreated in initialize).
   private Debouncer readyDebouncer;
 
-  private final DoubleSupplier xSupplier;
-  private final DoubleSupplier ySupplier;
-
-  public Shooting(boolean isEnergySave, DoubleSupplier xSupplier, DoubleSupplier ySupplier) {
-    this.xSupplier = xSupplier;
-    this.ySupplier = ySupplier;
+  public Shooting(boolean isEnergySave) {
     addRequirements(
         Drive.mInstance,
         Drum.mInstance,
@@ -115,41 +106,8 @@ public class Shooting extends Command {
         angleToHub().getRadians() - Drive.mInstance.getRotation().getRadians());
   }
 
-  /** Field-relative linear velocity from the left stick (unitless, squared magnitude). */
-  private static Translation2d getLinearVelocityFromJoysticks(double x, double y) {
-    double linearMagnitude =
-        MathUtil.applyDeadband(Math.hypot(x, y), ShootingConstants.DRIVE_DEADBAND);
-    Rotation2d linearDirection = new Rotation2d(Math.atan2(y, x));
-    linearMagnitude = linearMagnitude * linearMagnitude;
-    return new Pose2d(Translation2d.kZero, linearDirection)
-        .transformBy(new Transform2d(linearMagnitude, 0.0, Rotation2d.kZero))
-        .getTranslation();
-  }
-
-  /** True when the driver is commanding field-relative translation on the left stick. */
-  private boolean isDriverCommandingTranslation() {
-    return getLinearVelocityFromJoysticks(xSupplier.getAsDouble(), ySupplier.getAsDouble())
-            .getNorm()
-        > 1e-6;
-  }
-
-  /** True when measured chassis linear speed is below the stop threshold. */
-  private boolean isChassisTranslationStopped() {
-    ChassisSpeeds speeds = Drive.mInstance.getChassisSpeeds();
-    return Math.hypot(speeds.vxMetersPerSecond, speeds.vyMetersPerSecond)
-        < ShootingConstants.CHASSIS_STOP_VELOCITY_MPS;
-  }
-
-  /** Shooting only starts once the driver releases the sticks and the chassis settles. */
-  private boolean isChassisStopped() {
-    return !isDriverCommandingTranslation() && isChassisTranslationStopped();
-  }
-
-  /** Drive toward the HUB heading while allowing left-stick field-relative translation. */
+  /** Spin the chassis in place to face the HUB. */
   private void aimDrive() {
-    Translation2d linearVelocity =
-        getLinearVelocityFromJoysticks(xSupplier.getAsDouble(), ySupplier.getAsDouble());
-
     double currentAngleRad = Drive.mInstance.getRotation().getRadians();
     double targetAngleRad = angleToHub().getRadians();
     // PID correction against the moving profile setpoint, plus the profile's planned
@@ -163,37 +121,21 @@ public class Shooting extends Command {
     if (Math.abs(goalErrorRad()) < ShootingConstants.AIM_ERROR_DEADBAND_RAD) {
       omega = 0.0;
     }
-
-    boolean isFlipped =
-        DriverStation.getAlliance().isPresent()
-            && DriverStation.getAlliance().get() == Alliance.Red;
-    ChassisSpeeds speeds =
-        new ChassisSpeeds(
-            linearVelocity.getX() * Drive.mInstance.getMaxLinearSpeedMetersPerSec(),
-            linearVelocity.getY() * Drive.mInstance.getMaxLinearSpeedMetersPerSec(),
-            omega);
     Drive.mInstance.runVelocity(
         ChassisSpeeds.fromFieldRelativeSpeeds(
-            speeds,
-            isFlipped
-                ? Drive.mInstance.getRotation().plus(Rotation2d.kPi)
-                : Drive.mInstance.getRotation()));
-
+            new ChassisSpeeds(0.0, 0.0, omega), Drive.mInstance.getRotation()));
     Logger.recordOutput("Shooging/aimAngleRad", currentAngleRad);
     Logger.recordOutput("Shooging/aimSetpointRad", targetAngleRad);
     Logger.recordOutput("Shooging/aimProfilePositionRad", angleController.getSetpoint().position);
     Logger.recordOutput("Shooging/aimProfileVelRadPerSec", angleController.getSetpoint().velocity);
     Logger.recordOutput("Shooging/aimError", goalErrorRad());
     Logger.recordOutput("Shooging/aimOmegaRadPerSec", omega);
-    Logger.recordOutput("Shooging/driverCommandingTranslation", isDriverCommandingTranslation());
-    Logger.recordOutput("Shooging/chassisTranslationStopped", isChassisTranslationStopped());
-    Logger.recordOutput("Shooging/chassisStopped", isChassisStopped());
   }
 
-  /** The drum setpoint for a distance: sim-derived table times the distance-dependent kSpeed. */
+  /** The drum setpoint for a distance: sim-derived table times the kSpeed field knob. */
   private double drumSetpointRotps(double distance) {
     return ShootingConstants.distanceToShooterRotps.get(distance)
-        * ShootingConstants.kSpeed(distance);
+        * ShootingConstants.kSpeedTunable.getAsDouble();
   }
 
   /** Drive the flywheel and hood to the interpolated setpoints for the current distance. */
@@ -202,7 +144,6 @@ public class Shooting extends Command {
     Drum.mInstance.setVelocityRotPerSec(drumSetpointRotps(distance));
     Hood.mInstance.setPositionRot(ShootingConstants.distanceToHoodDeg.get(distance) / 360.);
     Logger.recordOutput("Shooging/drumSetpointRotps", drumSetpointRotps(distance));
-    Logger.recordOutput("Shooging/kSpeed", ShootingConstants.kSpeed(distance));
     Logger.recordOutput("Shooging/simDrumRotps", ShootingConstants.simDrumRotps(distance));
     // Sim-predicted hood angle (mechanism deg) for the current distance, next to the actual
     // table setpoint so field edits to the table are visible against the model.
@@ -226,32 +167,10 @@ public class Shooting extends Command {
     // Compare against the HUB goal, not angleController's error: the profiled controller's
     // error is measured against the moving profile setpoint and is near zero mid-turn.
     boolean aimReady = Math.abs(goalErrorRad()) < ShootingConstants.AIM_ANGLE_TOLERANCE_RAD;
-    boolean chassisStopped = isChassisStopped();
     Logger.recordOutput("Shooging/aimReady", aimReady);
     Logger.recordOutput("Shooging/hoodReady", hoodReady);
     Logger.recordOutput("Shooging/drumReady", drumReady);
-    Logger.recordOutput("Shooging/chassisReady", chassisStopped);
-    return drumReady && hoodReady && aimReady && chassisStopped;
-  }
-
-  /** Stop feeding and return to AIM after the driver moves or the chassis drifts during SHOOT. */
-  private void returnToAim() {
-    state = States.AIM;
-    retractTimerStarted = false;
-    retractTimer.stop();
-    retractTimer.reset();
-    readyDebouncer = new Debouncer(ShootingConstants.READY_DEBOUNCE_SEC, DebounceType.kRising);
-    angleController.reset(
-        Drive.mInstance.getRotation().getRadians(),
-        Drive.mInstance.getChassisSpeeds().omegaRadiansPerSecond);
-    IntakeRoller.mInstance.setV(0);
-    Indexer.mInstance.setV(0);
-    Feeder.mInstance.setV(0);
-  }
-
-  /** True when SHOOT/RETRACT should abort back to AIM because the chassis is moving. */
-  private boolean shouldReturnToAim() {
-    return !isChassisStopped();
+    return drumReady && hoodReady && aimReady;
   }
 
   private void aim() {
@@ -294,22 +213,17 @@ public class Shooting extends Command {
   }
 
   private boolean canRange() {
-    return !FeedPath.mInstance.HopperFilled();
+    return true;
   }
 
   private void shoot() {
-    if (shouldReturnToAim()) {
-      returnToAim();
-      return;
-    }
-
     // Keep tracking the HUB and holding flywheel/hood while feeding balls.
     prepareShooter();
     aimDrive();
     runFeed();
 
     // Once a long-range CANrange reading is seen, start the timer and retract after it expires.
-    if (!retractTimerStarted) {
+    if (canRange() && !retractTimerStarted) {
       retractTimer.restart();
       retractTimerStarted = true;
     }
@@ -320,11 +234,6 @@ public class Shooting extends Command {
   }
 
   private void retract() {
-    if (shouldReturnToAim()) {
-      returnToAim();
-      return;
-    }
-
     // Keep shooting while pulling the intake back to the retracted position.
     prepareShooter();
     aimDrive();

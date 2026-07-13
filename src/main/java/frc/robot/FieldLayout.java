@@ -57,17 +57,6 @@ public class FieldLayout {
         .lte(BLUE_ALLIANCE_LINE.plus(Units.Feet.of(4)));
   }
 
-  /**
-   * True when the robot is on its alliance side of the HUB (red: x &gt; hub x, blue: x &lt; hub x).
-   */
-  public static boolean isPoseInAllianceArea(boolean isRedAlliance, Pose2d pose) {
-    double hubX =
-        isRedAlliance
-            ? Constants.FieldConstants.RED_HUB_LOCATION.getX()
-            : Constants.FieldConstants.BLUE_HUB_LOCATION.getX();
-    return isRedAlliance ? pose.getX() > hubX : pose.getX() < hubX;
-  }
-
   public static Pose2d rotateAboutPose(Pose2d startPose, Translation2d point, Rotation2d rotation) {
     return new Pose2d(
         startPose.getTranslation().rotateAround(point, rotation),

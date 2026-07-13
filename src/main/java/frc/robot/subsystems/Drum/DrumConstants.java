@@ -41,8 +41,7 @@ public final class DrumConstants {
           .withGearbox(DCMotor.getKrakenX60Foc(2))
           .withGearing(Drum_ROTOR_TO_MECHANISM_RATIO)
           .withMomentOfInertia(0.003)
-          .withVelocityGains(0.12, 0.0)
-          .withInstantSetpoint(true);
+          .withVelocityGains(0.12, 0.0);
 
   private DrumConstants() {}
 }

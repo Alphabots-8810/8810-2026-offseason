@@ -7,6 +7,8 @@ import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
+import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.subsystems.drive.Drive;
 import java.util.function.DoubleSupplier;
@@ -49,40 +51,28 @@ public class AutoTrenchCommand extends Command {
 
   @Override
   public void initialize() {
+    Pose2d pose = drive.getPose();
+    boolean isRedAlliance =
+        DriverStation.getAlliance().isPresent()
+            && DriverStation.getAlliance().get() == Alliance.Red;
+    targetX =
+        isRedAlliance
+            ? AutoTrenchCommandConstants.RED_TRENCH_X_METERS
+            : AutoTrenchCommandConstants.BLUE_TRENCH_X_METERS;
+    targetY = getClosestTrenchY(pose.getY());
+    targetHeading = getClosestZeroOrPiHeading(drive.getRotation());
+
     state = State.ALIGN;
     yController.reset();
+    yController.setSetpoint(targetY);
     angleController.reset(drive.getRotation().getRadians());
-    targetX = getClosestTrenchX(drive.getPose().getX());
-    updateTargets();
   }
 
   @Override
   public void execute() {
-    updateTargets();
     switch (state) {
       case ALIGN -> align();
       case PASS -> pass();
-    }
-  }
-
-  /**
-   * Retargets to the closest trench every cycle, so holding the button while driving across the
-   * field always aims at the trench actually being approached. If the closest trench changes while
-   * in PASS (crossed the field midline toward the other trench), drop back to ALIGN so the approach
-   * slowdown and alignment gate run again for the new trench.
-   */
-  private void updateTargets() {
-    Pose2d pose = drive.getPose();
-    double closestX = getClosestTrenchX(pose.getX());
-    if (state == State.PASS && closestX != targetX) {
-      state = State.ALIGN;
-      yController.reset();
-    }
-    targetX = closestX;
-    if (state == State.ALIGN) {
-      targetY = getClosestTrenchY(pose.getY());
-      targetHeading = getClosestZeroOrPiHeading(drive.getRotation());
-      yController.setSetpoint(targetY);
     }
   }
 
@@ -147,17 +137,14 @@ public class AutoTrenchCommand extends Command {
   }
 
   private double calculateAlignXSpeed(double robotX, double joystickXSpeed) {
-    // Measure to the near entry face of the 1.2 m structure, not its centerline; negative when
-    // already inside the trench footprint.
-    double distanceToEntryFace =
-        Math.abs(targetX - robotX) - AutoTrenchCommandConstants.TRENCH_HALF_LENGTH_METERS;
-    if (distanceToEntryFace <= AutoTrenchCommandConstants.X_STOP_DISTANCE_METERS) {
+    double remainingDistance = Math.abs(targetX - robotX);
+    if (remainingDistance <= AutoTrenchCommandConstants.X_STOP_DISTANCE_METERS) {
       return 0.0;
     }
 
     double slowdownScale =
         MathUtil.clamp(
-            (distanceToEntryFace - AutoTrenchCommandConstants.X_STOP_DISTANCE_METERS)
+            (remainingDistance - AutoTrenchCommandConstants.X_STOP_DISTANCE_METERS)
                 / AutoTrenchCommandConstants.X_SLOWDOWN_RANGE_METERS,
             0.0,
             1.0);
@@ -183,12 +170,6 @@ public class AutoTrenchCommand extends Command {
       return Rotation2d.kZero;
     }
     return Rotation2d.kPi;
-  }
-
-  private static double getClosestTrenchX(double robotX) {
-    double blueX = AutoTrenchCommandConstants.BLUE_TRENCH_X_METERS;
-    double redX = AutoTrenchCommandConstants.RED_TRENCH_X_METERS;
-    return Math.abs(robotX - blueX) <= Math.abs(robotX - redX) ? blueX : redX;
   }
 
   private static double getClosestTrenchY(double robotY) {
