@@ -228,7 +228,7 @@ public class RobotContainer {
     controller.x().whileTrue(new Manual());
     controller.rightBumper().whileTrue(new Shooting(true));
     controller
-        .rightTrigger()
+        .rightBumper()
         .onTrue(
             new InstantCommand(
                 () -> {
@@ -236,7 +236,7 @@ public class RobotContainer {
                   Feeder.mInstance.setV(-3);
                 }));
     controller
-        .rightTrigger()
+        .rightBumper()
         .onFalse(
             new InstantCommand(
                 () -> {

@@ -17,7 +17,7 @@ public final class ShootingConstants {
       new LoggedTunableNumber("Shooting/ShooterOffset", 1.1);
 
   // Readiness tolerances used to decide when AIM is satisfied and we may shoot.
-  public static final double SHOOTER_VELOCITY_TOLERANCE_ROTPS = 1.;
+  public static final double SHOOTER_VELOCITY_TOLERANCE_ROTPS = 5.;
   public static final double HOOD_ANGLE_TOLERANCE_ROT = 0.02;
   public static final double AIM_ANGLE_TOLERANCE_RAD = Units.degreesToRadians(15.0);
 
@@ -109,7 +109,16 @@ public final class ShootingConstants {
   // 1.05 reproduces the two field-measured points (2.118 m -> 49.5 and 2.54 m -> 51.08
   // motor rot/s, ratios 1.054 and 1.044 vs the sim).
   public static final LoggedTunableNumber kSpeedTunable =
-      new LoggedTunableNumber("Shooting/kSpeed", 1.08);
+      new LoggedTunableNumber("Shooting/kSpeed", 1.067);
+
+  // Maple-sim projectile: launch speed (m/s) = drum target rot/s × this constant.
+  public static final LoggedTunableNumber SimLaunchSpeedPerDrumRotps =
+      new LoggedTunableNumber("Shooting/SimLaunchSpeedPerDrumRotps", 0.12);
+
+  // Maple-sim projectile: launch elevation (deg) = 90° − hood target (deg) − this offset.
+  // Default offset (90 − 78.2 = 11.8) reproduces hood=0 → 78.2° elevation from measurement.
+  public static final LoggedTunableNumber SimLaunchAngleOffsetDeg =
+      new LoggedTunableNumber("Shooting/SimLaunchAngleOffsetDeg", 90.0 - HOOD_ZERO_ELEVATION_DEG);
 
   /** Sim-predicted drum command (motor rot/s, before kSpeed) for a robot-center distance (m). */
   public static double simDrumRotps(double distanceMeters) {
