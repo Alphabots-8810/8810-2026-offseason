@@ -32,7 +32,8 @@ public class Shooting extends Command {
   private enum States {
     AIM,
     SHOOT,
-    RETRACT
+    RETRACT,
+    UNJAM
   }
 
   private States state;
@@ -41,6 +42,14 @@ public class Shooting extends Command {
   private final Timer retractTimer = new Timer();
   private boolean retractTimerStarted;
   private boolean isEnergySave;
+
+  // Indexer jam detection: stator current must stay above the threshold for the full debounce
+  // time before UNJAM triggers (recreated whenever detection restarts, see isIndexerJammed()).
+  private Debouncer jamDebouncer;
+  // Times the fixed backwards-run of the indexer in UNJAM.
+  private final Timer unjamTimer = new Timer();
+  // The feeding state (SHOOT or RETRACT) to resume once the unjam back-off finishes.
+  private States stateAfterUnjam = States.SHOOT;
 
   // Profiled heading controller: the trapezoid profile plans the turn (velocity is fed
   // forward), the PID only corrects tracking error against the moving profile setpoint.
@@ -87,6 +96,7 @@ public class Shooting extends Command {
         Drive.mInstance.getRotation().getRadians(),
         Drive.mInstance.getChassisSpeeds().omegaRadiansPerSecond);
     readyDebouncer = new Debouncer(ShootingConstants.READY_DEBOUNCE_SEC, DebounceType.kRising);
+    resetJamDetection();
   }
 
   /** The HUB translation for the current alliance. */
@@ -179,36 +189,35 @@ public class Shooting extends Command {
                 ? Drive.mInstance.getRotation().plus(Rotation2d.kPi)
                 : Drive.mInstance.getRotation()));
 
-    Logger.recordOutput("Shooging/aimAngleRad", currentAngleRad);
-    Logger.recordOutput("Shooging/aimSetpointRad", targetAngleRad);
-    Logger.recordOutput("Shooging/aimProfilePositionRad", angleController.getSetpoint().position);
-    Logger.recordOutput("Shooging/aimProfileVelRadPerSec", angleController.getSetpoint().velocity);
-    Logger.recordOutput("Shooging/aimError", goalErrorRad());
-    Logger.recordOutput("Shooging/aimOmegaRadPerSec", omega);
-    Logger.recordOutput("Shooging/driverCommandingTranslation", isDriverCommandingTranslation());
-    Logger.recordOutput("Shooging/chassisTranslationStopped", isChassisTranslationStopped());
-    Logger.recordOutput("Shooging/chassisStopped", isChassisStopped());
+    Logger.recordOutput("Shooting/aimAngleRad", currentAngleRad);
+    Logger.recordOutput("Shooting/aimSetpointRad", targetAngleRad);
+    Logger.recordOutput("Shooting/aimProfilePositionRad", angleController.getSetpoint().position);
+    Logger.recordOutput("Shooting/aimProfileVelRadPerSec", angleController.getSetpoint().velocity);
+    Logger.recordOutput("Shooting/aimError", goalErrorRad());
+    Logger.recordOutput("Shooting/aimOmegaRadPerSec", omega);
+    Logger.recordOutput("Shooting/driverCommandingTranslation", isDriverCommandingTranslation());
+    Logger.recordOutput("Shooting/chassisTranslationStopped", isChassisTranslationStopped());
+    Logger.recordOutput("Shooting/chassisStopped", isChassisStopped());
   }
 
   /** The drum setpoint for a distance: sim-derived table times the distance-dependent kSpeed. */
   private double drumSetpointRotps(double distance) {
     return ShootingConstants.distanceToShooterRotps.get(distance)
-        * ShootingConstants.kSpeed(distance);
+        * ShootingConstants.kSpeed.getAsDouble();
   }
 
-  /** Drive the flywheel and hood to the interpolated setpoints for the current distance. */
+  /** Drive the flywheel and hood to the interpolated sektpoints for the current distance. */
   private void prepareShooter() {
     double distance = distanceToHub();
     Drum.mInstance.setVelocityRotPerSec(drumSetpointRotps(distance));
     Hood.mInstance.setPositionRot(ShootingConstants.distanceToHoodDeg.get(distance) / 360.);
-    Logger.recordOutput("Shooging/drumSetpointRotps", drumSetpointRotps(distance));
-    Logger.recordOutput("Shooging/kSpeed", ShootingConstants.kSpeed(distance));
-    Logger.recordOutput("Shooging/simDrumRotps", ShootingConstants.simDrumRotps(distance));
+    Logger.recordOutput("Shooting/drumSetpointRotps", drumSetpointRotps(distance));
+    Logger.recordOutput("Shooting/simDrumRotps", ShootingConstants.simDrumRotps(distance));
     // Sim-predicted hood angle (mechanism deg) for the current distance, next to the actual
     // table setpoint so field edits to the table are visible against the model.
-    Logger.recordOutput("Shooging/simHoodDeg", ShootingConstants.simHoodDeg(distance));
+    Logger.recordOutput("Shooting/simHoodDeg", ShootingConstants.simHoodDeg(distance));
     Logger.recordOutput(
-        "Shooging/hoodSetpointDeg", ShootingConstants.distanceToHoodDeg.get(distance));
+        "Shooting/hoodSetpointDeg", ShootingConstants.distanceToHoodDeg.get(distance));
   }
 
   /** True once the flywheel, hood, and heading are all within tolerance. */
@@ -227,11 +236,63 @@ public class Shooting extends Command {
     // error is measured against the moving profile setpoint and is near zero mid-turn.
     boolean aimReady = Math.abs(goalErrorRad()) < ShootingConstants.AIM_ANGLE_TOLERANCE_RAD;
     boolean chassisStopped = isChassisStopped();
-    Logger.recordOutput("Shooging/aimReady", aimReady);
-    Logger.recordOutput("Shooging/hoodReady", hoodReady);
-    Logger.recordOutput("Shooging/drumReady", drumReady);
-    Logger.recordOutput("Shooging/chassisReady", chassisStopped);
+    Logger.recordOutput("Shooting/aimReady", aimReady);
+    Logger.recordOutput("Shooting/hoodReady", hoodReady);
+    Logger.recordOutput("Shooting/drumReady", drumReady);
+    Logger.recordOutput("Shooting/chassisReady", chassisStopped);
     return drumReady && hoodReady && aimReady && chassisStopped;
+  }
+
+  /**
+   * Restart jam detection from a clean baseline. The debouncer must be recreated whenever detection
+   * pauses (AIM, UNJAM): a stale one that last saw "jammed" would re-trip instantly on the first
+   * sample instead of requiring the full debounce time again.
+   */
+  private void resetJamDetection() {
+    jamDebouncer = new Debouncer(ShootingConstants.INDEXER_JAM_DEBOUNCE_SEC, DebounceType.kRising);
+  }
+
+  /** True when the indexer stator current has been above the jam threshold for the debounce. */
+  private boolean isIndexerJammed() {
+    boolean jammed =
+        jamDebouncer.calculate(
+            Indexer.mInstance.getStatorCurrentAmps() > ShootingConstants.INDEXER_JAM_CURRENT_AMPS);
+    Logger.recordOutput("Shooting/indexerJammed", jammed);
+    return jammed;
+  }
+
+  /**
+   * SHOOT/RETRACT -> UNJAM when the indexer stalls. Returns true when the transition fired;
+   * remembers the interrupted state so the volley resumes exactly where it left off.
+   */
+  private boolean checkJamAndStartUnjam(States resumeState) {
+    if (!isIndexerJammed()) {
+      return false;
+    }
+    stateAfterUnjam = resumeState;
+    state = States.UNJAM;
+    unjamTimer.restart();
+    return true;
+  }
+
+  /** Back the stalled fuel out of the indexer, then resume the interrupted feeding state. */
+  private void unjam() {
+    if (shouldReturnToAim()) {
+      returnToAim();
+      return;
+    }
+
+    // Keep aiming and holding flywheel/hood so shooting resumes immediately after the back-off.
+    prepareShooter();
+    aimDrive();
+    IntakeRoller.mInstance.setV(0);
+    Feeder.mInstance.setV(0);
+    Indexer.mInstance.setVelocityRotPerSec(-ShootingConstants.UNJAM_INDEXER_ROTPS.getAsDouble());
+
+    if (unjamTimer.hasElapsed(ShootingConstants.UNJAM_DURATION_SEC.getAsDouble())) {
+      resetJamDetection();
+      state = stateAfterUnjam;
+    }
   }
 
   /** Stop feeding and return to AIM after the driver moves or the chassis drifts during SHOOT. */
@@ -241,6 +302,7 @@ public class Shooting extends Command {
     retractTimer.stop();
     retractTimer.reset();
     readyDebouncer = new Debouncer(ShootingConstants.READY_DEBOUNCE_SEC, DebounceType.kRising);
+    resetJamDetection();
     angleController.reset(
         Drive.mInstance.getRotation().getRadians(),
         Drive.mInstance.getChassisSpeeds().omegaRadiansPerSecond);
@@ -302,6 +364,9 @@ public class Shooting extends Command {
       returnToAim();
       return;
     }
+    if (checkJamAndStartUnjam(States.SHOOT)) {
+      return;
+    }
 
     // Keep tracking the HUB and holding flywheel/hood while feeding balls.
     prepareShooter();
@@ -324,6 +389,9 @@ public class Shooting extends Command {
       returnToAim();
       return;
     }
+    if (checkJamAndStartUnjam(States.RETRACT)) {
+      return;
+    }
 
     // Keep shooting while pulling the intake back to the retracted position.
     prepareShooter();
@@ -339,6 +407,7 @@ public class Shooting extends Command {
       case AIM -> aim();
       case SHOOT -> shoot();
       case RETRACT -> retract();
+      case UNJAM -> unjam();
     }
   }
 

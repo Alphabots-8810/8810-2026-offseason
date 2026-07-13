@@ -3,6 +3,7 @@ package frc.lib.io;
 import static frc.robot.util.PhoenixUtil.*;
 
 import com.ctre.phoenix6.BaseStatusSignal;
+import com.ctre.phoenix6.CANBus;
 import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.CANrangeConfiguration;
 import com.ctre.phoenix6.configs.FovParamsConfigs;
@@ -71,7 +72,9 @@ public class SensorIOCANRange implements SensorIO {
 
   public SensorIOCANRange(SensorIOCANRangeConfig config, double debounceSecs) {
     this.config = config;
-    this.canrange = new CANrange(config.canId, config.canBus);
+    this.canrange =
+        new CANrange(
+            config.canId, config.canBus.isBlank() ? CANBus.roboRIO() : new CANBus(config.canBus));
     this.triggerDebouncer = new Debouncer(debounceSecs, Debouncer.DebounceType.kBoth);
 
     var canrangeConfig =

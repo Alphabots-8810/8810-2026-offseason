@@ -21,6 +21,12 @@ public class MotorSubsystem extends SubsystemBase {
   private final String logKey;
   private final Alert disconnectedAlert;
 
+  // Log keys are precomputed once instead of concatenated every 20-ms cycle; per-loop string
+  // garbage across all mechanism subsystems adds up to measurable GC pauses on the RIO.
+  private final String totalSupplyKey;
+  private String[] perMotorSupplyKeys = new String[0];
+  private String[] perMotorStatorKeys = new String[0];
+
   public MotorSubsystem(MotorIO io, String logKey, String disconnectedAlertText) {
     this(io, logKey, disconnectedAlertText, false);
   }
@@ -29,6 +35,7 @@ public class MotorSubsystem extends SubsystemBase {
       MotorIO io, String logKey, String disconnectedAlertText, boolean zeroOnInit) {
     this.io = io;
     this.logKey = logKey;
+    this.totalSupplyKey = logKey + "/Currents/TotalSupplyAmps";
     disconnectedAlert = new Alert(disconnectedAlertText, AlertType.kError);
     if (zeroOnInit) io.setEncoderPositionRot(0.0);
   }
@@ -41,13 +48,19 @@ public class MotorSubsystem extends SubsystemBase {
 
     // Named per-motor current folder for spotting asymmetrical load on multi-motor mechanisms
     // (wrong follower invert, dragging bearing, brownout): healthy motors track each other.
-    Logger.recordOutput(logKey + "/Currents/TotalSupplyAmps", inputs.totalSupplyCurrentAmps);
+    Logger.recordOutput(totalSupplyKey, inputs.totalSupplyCurrentAmps);
+    if (perMotorSupplyKeys.length != inputs.perMotorSupplyCurrentAmps.length) {
+      perMotorSupplyKeys = new String[inputs.perMotorSupplyCurrentAmps.length];
+      perMotorStatorKeys = new String[inputs.perMotorSupplyCurrentAmps.length];
+      for (int i = 0; i < perMotorSupplyKeys.length; i++) {
+        String motor = i == 0 ? "Leader" : "Follower" + i;
+        perMotorSupplyKeys[i] = logKey + "/Currents/" + motor + "/SupplyAmps";
+        perMotorStatorKeys[i] = logKey + "/Currents/" + motor + "/StatorAmps";
+      }
+    }
     for (int i = 0; i < inputs.perMotorSupplyCurrentAmps.length; i++) {
-      String motor = i == 0 ? "Leader" : "Follower" + i;
-      Logger.recordOutput(
-          logKey + "/Currents/" + motor + "/SupplyAmps", inputs.perMotorSupplyCurrentAmps[i]);
-      Logger.recordOutput(
-          logKey + "/Currents/" + motor + "/StatorAmps", inputs.perMotorStatorCurrentAmps[i]);
+      Logger.recordOutput(perMotorSupplyKeys[i], inputs.perMotorSupplyCurrentAmps[i]);
+      Logger.recordOutput(perMotorStatorKeys[i], inputs.perMotorStatorCurrentAmps[i]);
     }
   }
 

@@ -149,8 +149,9 @@ public class RobotContainer {
     // No EventTrigger bindings for Choreo event markers: EventTrigger commands are scheduled on
     // the main scheduler, so their subsystem requirements conflict with the deferred block auto
     // (which holds every subsystem) and cancel the entire auto the moment a marker fires. The
-    // t=0 "IntakeZeroOut" work now runs inline in AutoCommands.firstPathWithIntake instead; any
-    // marker still present in a .traj simply fires into an unbound trigger.
+    // "IntakeZeroOut" work now runs inline before the first path in
+    // AutoCommands.firstPathWithIntake; any marker still present in a .traj simply fires into an
+    // unbound trigger.
 
     // Set up auto routines
     autoChooser = new LoggedDashboardChooser<>("Auto Choices", AutoBuilder.buildAutoChooser());
@@ -331,5 +332,7 @@ public class RobotContainer {
   /** Dashboard outputs refreshed every loop (block-auto selection table, etc.). */
   public void updateDashboardOutputs() {
     blockAutoBuilder.publishSelection();
+    // Pre-build the block auto while disabled so auto init pays no path-loading cost.
+    blockAutoBuilder.updatePrebuild();
   }
 }

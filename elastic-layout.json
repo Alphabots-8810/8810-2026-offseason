@@ -253,7 +253,7 @@
             "height": 128.0,
             "type": "Boolean Box",
             "properties": {
-              "topic": "/AdvantageKit/RealOutputs/Shooging/drumReady",
+              "topic": "/AdvantageKit/RealOutputs/Shooting/drumReady",
               "period": 0.06,
               "data_type": "boolean",
               "true_color": 4283215696,
@@ -270,7 +270,7 @@
             "height": 128.0,
             "type": "Boolean Box",
             "properties": {
-              "topic": "/AdvantageKit/RealOutputs/Shooging/hoodReady",
+              "topic": "/AdvantageKit/RealOutputs/Shooting/hoodReady",
               "period": 0.06,
               "data_type": "boolean",
               "true_color": 4283215696,
@@ -287,7 +287,7 @@
             "height": 128.0,
             "type": "Boolean Box",
             "properties": {
-              "topic": "/AdvantageKit/RealOutputs/Shooging/aimReady",
+              "topic": "/AdvantageKit/RealOutputs/Shooting/aimReady",
               "period": 0.06,
               "data_type": "boolean",
               "true_color": 4283215696,
@@ -304,7 +304,7 @@
             "height": 128.0,
             "type": "Boolean Box",
             "properties": {
-              "topic": "/AdvantageKit/RealOutputs/Shooging/chassisReady",
+              "topic": "/AdvantageKit/RealOutputs/Shooting/chassisReady",
               "period": 0.06,
               "data_type": "boolean",
               "true_color": 4283215696,

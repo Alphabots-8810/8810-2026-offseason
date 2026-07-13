@@ -79,6 +79,9 @@ public class Robot extends LoggedRobot {
   public void robotPeriodic() {
     // Optionally switch the thread to high priority to improve loop
     // timing (see the template project documentation for details)
+    // Keep this disabled: at RT priority 99 any long loop (boot config flash, GC pause)
+    // starves the NI NetComm and Phoenix threads — all CANivore signals go stale and the
+    // Driver Station drops comms until the loop yields.
     // Threads.setCurrentThreadPriority(true, 99);
 
     // Runs the Scheduler. This is responsible for polling buttons, adding

@@ -45,6 +45,19 @@ public final class ShootingConstants {
   // overshoot from 3.5 rad/s). 10 leaves headroom so the profile brakes early enough.
   public static final double AIM_MAX_ACCELERATION_RAD_PER_SEC2 = 10.0;
 
+  // Indexer jam detection during SHOOT/RETRACT: stator current continuously above this threshold
+  // for the debounce time means a ball is stalled against the indexer (free-running feed draws far
+  // less; the config's stator limit is 100 A so a true stall does reach 90). NOTE: only the normal
+  // velocity-closed-loop feed can trip this — energy-save mode drives the indexer at 50 A torque
+  // current, which caps stator current below the threshold.
+  public static final double INDEXER_JAM_CURRENT_AMPS = 90.0;
+  public static final double INDEXER_JAM_DEBOUNCE_SEC = 0.2;
+  // Unjam response: run the indexer backwards at this speed for this long, then resume the volley.
+  public static final LoggedTunableNumber UNJAM_INDEXER_ROTPS =
+      new LoggedTunableNumber("Shooting/UnjamIndexerRotps", 40);
+  public static final LoggedTunableNumber UNJAM_DURATION_SEC =
+      new LoggedTunableNumber("Shooting/UnjamDurationSec", 0.5);
+
   // Once SHOOT starts and the CANrange reports a long-distance reading, wait this long (seconds)
   // before retracting the intake.
   public static final LoggedTunableNumber RETRACT_DELAY_SEC =
@@ -131,17 +144,8 @@ public final class ShootingConstants {
   // knob: balls SHORT at that distance -> raise, LONG -> lower.
   public static final double K_NEAR_DISTANCE_M = 2.0;
   public static final double K_FAR_DISTANCE_M = 3.0;
-  public static final LoggedTunableNumber kSpeedNearTunable =
-      new LoggedTunableNumber("Shooting/kSpeedNear", 1.07);
-  public static final LoggedTunableNumber kSpeedFarTunable =
-      new LoggedTunableNumber("Shooting/kSpeedFar", 1.08);
-
-  /** Distance-dependent drum speed correction: pure linear in distance, no clamping. */
-  public static double kSpeed(double distanceMeters) {
-    double t = (distanceMeters - K_NEAR_DISTANCE_M) / (K_FAR_DISTANCE_M - K_NEAR_DISTANCE_M);
-    return kSpeedNearTunable.getAsDouble()
-        + (kSpeedFarTunable.getAsDouble() - kSpeedNearTunable.getAsDouble()) * t;
-  }
+  public static final LoggedTunableNumber kSpeed =
+      new LoggedTunableNumber("Shooting/kSpeedNear", 1.065);
 
   // Maple-sim projectile: launch speed (m/s) = drum target rot/s × this constant.
   public static final LoggedTunableNumber SimLaunchSpeedPerDrumRotps =
@@ -175,7 +179,7 @@ public final class ShootingConstants {
     distanceToShooterRotps.put(5.06, simDrumRotps(5.06)); // 61.49
     // Hood angles come from simHoodDeg() above (Alpha Sim polynomial converted to the
     // mechanism frame). Kept as a table so individual points can still be nudged on the
-    // field; compare against the logged "Shooging/simHoodDeg" to see any hand edits.
+    // field; compare against the logged "Shooting/simHoodDeg" to see any hand edits.
     distanceToHoodDeg.put(2.118, simHoodDeg(2.118)); // 8.85
     distanceToHoodDeg.put(2.54, simHoodDeg(2.54)); // 11.69
     distanceToHoodDeg.put(3.05, simHoodDeg(3.05)); // 14.70

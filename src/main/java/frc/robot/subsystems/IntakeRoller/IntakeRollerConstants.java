@@ -27,7 +27,7 @@ public final class IntakeRollerConstants {
           .withRotorToMechanismRatio(IntakeRoller_ROTOR_TO_MECHANISM_RATIO)
           .withInverted(true)
           .withNeutralMode(NeutralMode.COAST)
-          .withCurrentLimits(30.0, 60.0)
+          .withCurrentLimits(30.0, 100.0)
           .withSlot0(10, 0.0, 0.0, 7, 0.0, 0.0, 0.0)
           .withClosedLoopOutput(ClosedLoopOutput.TORQUE_CURRENT_FOC)
           .withFollower(IntakeRoller_R_ID, true);

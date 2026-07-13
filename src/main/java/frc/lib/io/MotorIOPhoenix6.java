@@ -303,8 +303,11 @@ public class MotorIOPhoenix6 implements MotorIO {
     inputs.appliedVolts = appliedVolts.getValueAsDouble();
     inputs.supplyCurrentAmps = supplyCurrent.getValueAsDouble();
     inputs.statorCurrentAmps = statorCurrent.getValueAsDouble();
-    inputs.perMotorSupplyCurrentAmps = new double[1 + followers.size()];
-    inputs.perMotorStatorCurrentAmps = new double[1 + followers.size()];
+    // Reuse the arrays across cycles (same inputs object every loop) to avoid per-loop garbage
+    if (inputs.perMotorSupplyCurrentAmps.length != 1 + followers.size()) {
+      inputs.perMotorSupplyCurrentAmps = new double[1 + followers.size()];
+      inputs.perMotorStatorCurrentAmps = new double[1 + followers.size()];
+    }
     inputs.perMotorSupplyCurrentAmps[0] = inputs.supplyCurrentAmps;
     inputs.perMotorStatorCurrentAmps[0] = inputs.statorCurrentAmps;
     double totalSupply = inputs.supplyCurrentAmps;
