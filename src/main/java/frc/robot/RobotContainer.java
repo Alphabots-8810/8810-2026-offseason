@@ -41,7 +41,7 @@ import frc.robot.subsystems.drive.GyroIOSim;
 import frc.robot.subsystems.drive.ModuleIO;
 import frc.robot.subsystems.drive.ModuleIOSim;
 import frc.robot.subsystems.drive.ModuleIOTalonFX;
-import frc.robot.subsystems.vision.Cameras;
+import frc.robot.subsystems.vision.Vision;
 import frc.robot.util.LoggedTunableNumber;
 import java.util.Set;
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
@@ -68,8 +68,9 @@ public class RobotContainer {
   private final IntakeRoller intakeRoller = IntakeRoller.mInstance;
   private final LoggedTunableNumber retract = new LoggedTunableNumber("retract", 25);
 
-  // Created after the drive in the constructor because its cameras read the drive pose
-  private Cameras cameras = Cameras.mInstance;
+  // Created after the drive in the constructor because its camera reads the drive pose
+  private Vision vision = Vision.mInstance;
+  private Vision vision2 = Vision.mInstance2;
 
   // Controller
   private final CommandXboxController controller = new CommandXboxController(0);
@@ -142,9 +143,10 @@ public class RobotContainer {
     }
     Drive.mInstance = drive;
 
-    // Initialize the camera subsystem after Drive.mInstance is set, since its
+    // Initialize the vision subsystem after Drive.mInstance is set, since its
     // periodic reads the drive pose
-    cameras = Cameras.mInstance;
+    vision = Vision.mInstance;
+    vision2 = Vision.mInstance2;
 
     // No EventTrigger bindings for Choreo event markers: EventTrigger commands are scheduled on
     // the main scheduler, so their subsystem requirements conflict with the deferred block auto

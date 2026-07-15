@@ -31,12 +31,6 @@ public class IntakeCommand extends Command {
   }
 
   private void runIntake() {
-    if (FeedPath.mInstance.HopperFilled()) {
-      IntakeRoller.mInstance.setVelocityRotPerSec(95);
-    } else {
-      IntakeRoller.mInstance.setVelocityRotPerSec(IntakeCommandConstants.INTAKE_ROLLER_ROTPS);
-    }
-
     IntakeRoller.mInstance.setVelocityRotPerSec(IntakeCommandConstants.INTAKE_ROLLER_ROTPS);
     IntakeDeploy.mInstance.setPositionCentimeter(
         IntakeCommandConstants.INTAKE_DEPLOY_POSITION_CM,
