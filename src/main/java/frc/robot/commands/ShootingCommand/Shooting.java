@@ -282,12 +282,14 @@ public class Shooting extends Command {
       return;
     }
 
-    // Keep aiming and holding flywheel/hood so shooting resumes immediately after the back-off.
+    // Keep holding the flywheel/hood and X-lock the drivetrain so shooting resumes immediately
+    // after the back-off without allowing the robot to be pushed off target.
     prepareShooter();
     aimDrive();
     IntakeRoller.mInstance.setV(0);
-    Feeder.mInstance.setV(0);
-    Indexer.mInstance.setVelocityRotPerSec(-ShootingConstants.UNJAM_INDEXER_ROTPS.getAsDouble());
+    Feeder.mInstance.setV(-ShootingConstants.UNJAM_Feeder_Current.getAsDouble());
+    Indexer.mInstance.setVelocityRotPerSec(ShootingConstants.UNJAM_INDEXER_Current.getAsDouble());
+    IntakeDeploy.mInstance.setPositionCentimeter(55);
 
     if (unjamTimer.hasElapsed(ShootingConstants.UNJAM_DURATION_SEC.getAsDouble())) {
       resetJamDetection();
@@ -368,7 +370,7 @@ public class Shooting extends Command {
       return;
     }
 
-    // Keep tracking the HUB and holding flywheel/hood while feeding balls.
+    // Lock the wheels once feeding begins so the robot cannot be pushed off its aimed heading.
     prepareShooter();
     aimDrive();
     runFeed();
@@ -393,7 +395,7 @@ public class Shooting extends Command {
       return;
     }
 
-    // Keep shooting while pulling the intake back to the retracted position.
+    // Keep shooting and X-locking the drivetrain while pulling the intake back.
     prepareShooter();
     aimDrive();
     runFeed();

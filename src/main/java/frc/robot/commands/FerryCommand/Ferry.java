@@ -141,12 +141,12 @@ public class Ferry extends Command {
 
     boolean drumReady =
         Math.abs(Drum.mInstance.getVelocityRotPerSec() - targetDrumRotps)
-            < ShootingConstants.SHOOTER_VELOCITY_TOLERANCE_ROTPS;
+            < FerryConstants.SHOOTER_VELOCITY_TOLERANCE_ROTPS;
     boolean hoodReady =
         Math.abs(Hood.mInstance.getPositionRot() - targetHoodRot)
-            < ShootingConstants.HOOD_ANGLE_TOLERANCE_ROT;
+            < FerryConstants.HOOD_ANGLE_TOLERANCE_ROT;
     boolean aimReady =
-        Math.abs(angleController.getPositionError()) < ShootingConstants.AIM_ANGLE_TOLERANCE_RAD;
+        Math.abs(angleController.getPositionError()) < FerryConstants.AIM_ANGLE_TOLERANCE_RAD;
 
     return drumReady && hoodReady && aimReady;
   }

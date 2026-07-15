@@ -46,4 +46,8 @@ public class FerryConstants {
     ferryDistanceToHoodDeg.put(4.55 * 1.2, 23.);
     ferryDistanceToHoodDeg.put(5.06 * 1.2, 25.);
   }
+
+  public static double SHOOTER_VELOCITY_TOLERANCE_ROTPS = 2.0;
+  public static double HOOD_ANGLE_TOLERANCE_ROT = 0.05;
+  public static double AIM_ANGLE_TOLERANCE_RAD = edu.wpi.first.math.util.Units.degreesToRadians(30-.0);
 }

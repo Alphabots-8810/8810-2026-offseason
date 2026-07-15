@@ -73,7 +73,7 @@ public class RobotContainer {
   private Vision vision2 = Vision.mInstance2;
 
   // Controller
-  private final CommandXboxController controller = new CommandXboxController(0);
+  private final CommandXboxController controller = new CommandXboxController(1);
 
   // Dashboard inputs
   private final LoggedDashboardChooser<Command> autoChooser;

@@ -101,7 +101,7 @@ public final class AutoCommands {
    */
   static Command trenchThenPathWithIntake(String name) {
     return Commands.sequence(new AutopilotTrenchCommand(name), followChoreo(name))
-        .raceWith(new IntakeCommand());
+        .raceWith(new IntakeCommand(100, 500, false));
   }
 
   /**
@@ -138,7 +138,7 @@ public final class AutoCommands {
       return new IntakeCommand();
     }
     return Commands.sequence(
-        new IntakeCommand().withTimeout(stowTime.get()),
+        new IntakeCommand(50, 250, false).withTimeout(stowTime.get()),
         Commands.runOnce(() -> Drum.mInstance.setCurrent(10), Drum.mInstance));
   }
 
