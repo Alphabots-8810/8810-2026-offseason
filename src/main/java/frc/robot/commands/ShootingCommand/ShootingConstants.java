@@ -32,7 +32,7 @@ public final class ShootingConstants {
   // Inside this heading error the omega command is zeroed. Errors this small produce omega
   // commands below what the swerve can execute; static friction turns them into a ~5 Hz
   // limit-cycle wiggle. 1 deg of heading is ~9 cm lateral at 5 m, well inside the HUB.
-  public static final double AIM_ERROR_DEADBAND_RAD = Units.degreesToRadians(1.0);
+  public static final double AIM_ERROR_DEADBAND_RAD = Units.degreesToRadians(1.5);
 
   // Aim heading controller (profiled). Gains carry over from the pre-profile aim controller
   // (verified: no overshoot, well damped); the trapezoid constraints are inherited from the
@@ -44,6 +44,21 @@ public final class ShootingConstants {
   // aimtest2: planned 20 rad/s^2 decel but the chassis only achieved ~17.5 (0.35 rad
   // overshoot from 3.5 rad/s). 10 leaves headroom so the profile brakes early enough.
   public static final double AIM_MAX_ACCELERATION_RAD_PER_SEC2 = 10.0;
+
+  // Indexer jam detection during SHOOT/RETRACT: stator current continuously above this threshold
+  // for the debounce time means a ball is stalled against the indexer (free-running feed draws far
+  // less; the config's stator limit is 100 A so a true stall does reach 90). NOTE: only the normal
+  // velocity-closed-loop feed can trip this — energy-save mode drives the indexer at 50 A torque
+  // current, which caps stator current below the threshold.
+  public static final double INDEXER_JAM_CURRENT_AMPS = 90.0;
+  public static final double INDEXER_JAM_DEBOUNCE_SEC = 0.2;
+  // Unjam response: run the indexer backwards at this speed for this long, then resume the volley.
+  public static final LoggedTunableNumber UNJAM_INDEXER_Current =
+      new LoggedTunableNumber("Shooting/UnjamIndexerCurrent", 50);
+  public static final LoggedTunableNumber UNJAM_Feeder_Current =
+      new LoggedTunableNumber("Shooting/UnjamFeederCurrent", 30);
+  public static final LoggedTunableNumber UNJAM_DURATION_SEC =
+      new LoggedTunableNumber("Shooting/UnjamDurationSec", 0.5);
 
   // Once SHOOT starts and the CANrange reports a long-distance reading, wait this long (seconds)
   // before retracting the intake.
@@ -121,29 +136,12 @@ public final class ShootingConstants {
   public static final double DRUM_SURFACE_M_PER_MOTOR_ROT =
       Math.PI * DRUM_WHEEL_DIAMETER_M * DRUM_MOTOR_TO_WHEEL_RATIO;
 
-  // THE field-calibration knob from the sim handoff, applied to the drum speed at use time
-  // (not baked into the table): balls landing SHORT -> raise, LONG -> lower. 1.0 = raw sim.
-  // Field testing (2026-07-12) found the required correction GROWS with distance — the sim's
-  // fixed 0.18 slip and drag model under-predict the far shots — so the single knob became a
-  // two-point PURE linear line through (K_NEAR_DISTANCE_M, kSpeedNear) and
-  // (K_FAR_DISTANCE_M, kSpeedFar), extrapolated without clamping on both sides, so the
-  // defaults give 1.07 @ 2 m, 1.08 @ 3 m, 1.09 @ 4 m, 1.10 @ 5 m. Same tuning rule per
-  // knob: balls SHORT at that distance -> raise, LONG -> lower.
-  public static final double K_NEAR_DISTANCE_M = 2.0;
-  public static final double K_FAR_DISTANCE_M = 3.0;
-  public static final LoggedTunableNumber kSpeedNearTunable =
-      new LoggedTunableNumber("Shooting/kSpeedNear", 1.07);
-  public static final LoggedTunableNumber kSpeedFarTunable =
-      new LoggedTunableNumber("Shooting/kSpeedFar", 1.08);
+  // Shared field-calibration knob applied to the drum speed at use time (not baked into the
+  // table): balls landing SHORT -> raise, LONG -> lower. 1.0 = raw sim.
+  public static final LoggedTunableNumber kSpeed =
+      new LoggedTunableNumber("Shooting/kSpeedNear", 1.065);
 
-  /** Distance-dependent drum speed correction: pure linear in distance, no clamping. */
-  public static double kSpeed(double distanceMeters) {
-    double t = (distanceMeters - K_NEAR_DISTANCE_M) / (K_FAR_DISTANCE_M - K_NEAR_DISTANCE_M);
-    return kSpeedNearTunable.getAsDouble()
-        + (kSpeedFarTunable.getAsDouble() - kSpeedNearTunable.getAsDouble()) * t;
-  }
-
-  // Team 9997's field calibration is applied on top of the shared distance-dependent curve.
+  // Team 9997's field calibration is applied on top of the shared speed correction.
   public static final LoggedTunableNumber kSpeed9997CorrectionTunable =
       new LoggedTunableNumber("Shooting/kSpeed9997Correction", 1.067);
 
@@ -179,7 +177,7 @@ public final class ShootingConstants {
     distanceToShooterRotps.put(5.06, simDrumRotps(5.06)); // 61.49
     // Hood angles come from simHoodDeg() above (Alpha Sim polynomial converted to the
     // mechanism frame). Kept as a table so individual points can still be nudged on the
-    // field; compare against the logged "Shooging/simHoodDeg" to see any hand edits.
+    // field; compare against the logged "Shooting/simHoodDeg" to see any hand edits.
     distanceToHoodDeg.put(2.118, simHoodDeg(2.118)); // 8.85
     distanceToHoodDeg.put(2.54, simHoodDeg(2.54)); // 11.69
     distanceToHoodDeg.put(3.05, simHoodDeg(3.05)); // 14.70

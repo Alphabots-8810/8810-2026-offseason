@@ -5,6 +5,7 @@ import frc.lib.io.MotorIO;
 import frc.lib.io.MotorIOPhoenix6;
 import frc.lib.io.MotorIOSim;
 import frc.robot.Constants;
+import org.littletonrobotics.junction.Logger;
 
 public class IntakeDeploy extends MotorSubsystem {
   public static final IntakeDeploy mInstance = new IntakeDeploy();
@@ -19,7 +20,13 @@ public class IntakeDeploy extends MotorSubsystem {
         "IntakeDeploy",
         "Disconnected IntakeDeploy motor.",
         true);
-    resetEncoderPositionCentimeter(IntakeDeployConstants.IntakeOutPosition);
+    resetEncoderPositionCentimeter(0);
+  }
+
+  @Override
+  public void periodic() {
+    super.periodic();
+    Logger.recordOutput("IntakeDeploy/PositionCentimeter", getPositionCentimeter());
   }
 
   public void setPositionCentimeter(double Centimeter) {

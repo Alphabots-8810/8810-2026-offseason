@@ -54,6 +54,18 @@ public class Ferry extends Command {
   private final Timer retractTimer = new Timer();
   private boolean retractTimerStarted = false;
 
+  public Ferry() {
+    addRequirements(
+        Drum.mInstance,
+        Hood.mInstance,
+        Feeder.mInstance,
+        Indexer.mInstance,
+        Drive.mInstance,
+        IntakeDeploy.mInstance,
+        IntakeRoller.mInstance);
+    angleController.enableContinuousInput(-Math.PI, Math.PI);
+  }
+
   private void calculateTarget() {
     robotpose = Drive.mInstance.getPose();
     Translation2d robotXY = robotpose.getTranslation();
@@ -129,12 +141,12 @@ public class Ferry extends Command {
 
     boolean drumReady =
         Math.abs(Drum.mInstance.getVelocityRotPerSec() - targetDrumRotps)
-            < ShootingConstants.SHOOTER_VELOCITY_TOLERANCE_ROTPS;
+            < FerryConstants.SHOOTER_VELOCITY_TOLERANCE_ROTPS;
     boolean hoodReady =
         Math.abs(Hood.mInstance.getPositionRot() - targetHoodRot)
-            < ShootingConstants.HOOD_ANGLE_TOLERANCE_ROT;
+            < FerryConstants.HOOD_ANGLE_TOLERANCE_ROT;
     boolean aimReady =
-        Math.abs(angleController.getPositionError()) < ShootingConstants.AIM_ANGLE_TOLERANCE_RAD;
+        Math.abs(angleController.getPositionError()) < FerryConstants.AIM_ANGLE_TOLERANCE_RAD;
 
     return drumReady && hoodReady && aimReady;
   }
@@ -186,18 +198,6 @@ public class Ferry extends Command {
     runFeed();
     IntakeDeploy.mInstance.setPositionCentimeter(
         ShootingConstants.INTAKE_RETRACT_POSITION_CM.getAsDouble(), 50, 1000, 0);
-  }
-
-  public Ferry() {
-    addRequirements(
-        Drum.mInstance,
-        Hood.mInstance,
-        Feeder.mInstance,
-        Indexer.mInstance,
-        Drive.mInstance,
-        IntakeDeploy.mInstance,
-        IntakeRoller.mInstance);
-    angleController.enableContinuousInput(-Math.PI, Math.PI);
   }
 
   @Override

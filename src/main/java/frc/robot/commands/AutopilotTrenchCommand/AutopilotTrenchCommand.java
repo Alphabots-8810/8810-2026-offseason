@@ -21,6 +21,7 @@ import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj2.command.Command;
+import frc.robot.commands.AutoCommands.AutoCommands;
 import frc.robot.commands.AutoTrenchCommand.AutoTrenchCommandConstants;
 import frc.robot.subsystems.drive.Drive;
 import org.littletonrobotics.junction.Logger;
@@ -341,7 +342,9 @@ public class AutopilotTrenchCommand extends Command {
 
   private static PathPlannerPath loadPath(String pathName) {
     try {
-      return PathPlannerPath.fromChoreoTrajectory(pathName);
+      // Shared cache: BlockAutoBuilder's followChoreo loads the same path, so the .traj is only
+      // parsed from disk once per boot.
+      return AutoCommands.loadChoreoPath(pathName);
     } catch (Exception e) {
       throw new IllegalArgumentException("Failed to load next Choreo path: " + pathName, e);
     }

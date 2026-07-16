@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
@@ -31,12 +32,13 @@ import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
  *
  * <p>Scans {@code deploy/choreo} for trajectories named {@code <Side><Section><Variant>.traj} (e.g.
  * {@code Left1InnerSwap.traj} = side Left, section 1, variant InnerSwap) and publishes four
- * choosers: side (Left/Right) plus one variant chooser per section. The auto is assembled when
- * autonomous starts, so choosers can be changed on Elastic right up to the match:
+ * choosers: side (Left/Right) plus one variant chooser per section. The auto is pre-built while the
+ * robot sits disabled (rebuilt whenever a chooser changes, see {@link #updatePrebuild()}), so
+ * choosers can be changed on Elastic right up to the match and autonomous still starts instantly —
+ * no path loading or command construction happens at auto init:
  *
  * <ol>
- *   <li>Section 1 path (reset odometry to its start and launch immediately; the intake deploy
- *       outward-zeroes alongside the path)
+ *   <li>Outward-zero the intake deploy, then run Section 1 while deploying and intaking
  *   <li>Timed shooting
  *   <li>Autopilot trench pass + Section 2 path, intaking from the moment the shot ends
  *   <li>Timed shooting
@@ -68,6 +70,11 @@ public class BlockAutoBuilder {
 
   private final LoggedDashboardChooser<String> sideChooser;
   private final List<LoggedDashboardChooser<String>> sectionChoosers = new ArrayList<>();
+
+  /** Auto pre-built while disabled, handed out by {@link #buildCommand()}'s deferred supplier. */
+  private Command prebuiltAuto = null;
+  /** Chooser values (side, then sections 1-3) the prebuilt auto was built from; null = none. */
+  private String[] prebuiltSelection = null;
 
   public BlockAutoBuilder() {
     sideChooser = new LoggedDashboardChooser<>("BlockAuto/Side");
@@ -122,12 +129,13 @@ public class BlockAutoBuilder {
   }
 
   /**
-   * The command to register on the main auto chooser. Deferred: the selected side/variants are read
-   * and the sequence assembled when autonomous actually starts.
+   * The command to register on the main auto chooser. Deferred, but the supplier normally just
+   * hands out the auto pre-built while disabled — building at auto init only happens as a fallback
+   * if the choosers changed in the same cycle autonomous started.
    */
   public Command buildCommand() {
     return Commands.defer(
-        this::buildSelectedAuto,
+        this::takePrebuiltOrBuild,
         Set.<Subsystem>of(
             Drive.mInstance,
             Drum.mInstance,
@@ -138,18 +146,93 @@ public class BlockAutoBuilder {
             IntakeRoller.mInstance));
   }
 
-  /** Publishes only the three selected trajectory names for a compact dashboard preview. */
+  /**
+   * Call every loop while the robot is disabled: rebuilds the cached auto only when the
+   * side/variant selection actually changed, so all Choreo path loading and command construction
+   * cost is paid before the match instead of at auto init. The steady-state check is
+   * allocation-free (plain string compares against the cached selection) — per-loop garbage on the
+   * RIO shows up as GC pauses and CANivore timestamp-desync warnings. Does nothing while enabled —
+   * a mid-match rebuild would fight the running auto for path/command state.
+   */
+  public void updatePrebuild() {
+    if (!DriverStation.isDisabled() || selectionMatchesPrebuilt()) {
+      return;
+    }
+    // Capture the selection before building so a chooser edit mid-build just looks like another
+    // change next cycle.
+    String[] selection = new String[NUM_SECTIONS + 1];
+    selection[0] = sideChooser.get();
+    for (int i = 0; i < NUM_SECTIONS; i++) {
+      selection[i + 1] = sectionChoosers.get(i).get();
+    }
+    prebuiltAuto = buildSelectedAuto();
+    prebuiltSelection = selection;
+  }
+
+  /** True when a prebuilt auto exists and the choosers still read the values it was built from. */
+  private boolean selectionMatchesPrebuilt() {
+    if (prebuiltSelection == null) {
+      return false;
+    }
+    if (!Objects.equals(prebuiltSelection[0], sideChooser.get())) {
+      return false;
+    }
+    for (int i = 0; i < NUM_SECTIONS; i++) {
+      if (!Objects.equals(prebuiltSelection[i + 1], sectionChoosers.get(i).get())) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Deferred supplier: the prebuilt auto when it matches the current selection, otherwise a fresh
+   * build (first enable after boot without a disabled cycle, or a chooser edit racing auto init).
+   * The cache is cleared either way — DeferredCommand registers whatever it runs as composed, so an
+   * instance can only ever be handed out once; the next disabled cycle pre-builds a fresh one.
+   */
+  private Command takePrebuiltOrBuild() {
+    Command auto = selectionMatchesPrebuilt() ? prebuiltAuto : buildSelectedAuto();
+    prebuiltAuto = null;
+    prebuiltSelection = null;
+    return auto;
+  }
+
+  /** Pre-built NT keys for the selection table — no per-loop string concatenation. */
+  private static final String[] TABLE_KEYS = new String[NUM_SECTIONS];
+
+  static {
+    for (int i = 0; i < NUM_SECTIONS; i++) {
+      TABLE_KEYS[i] = "BlockAuto/Table/Path" + (i + 1);
+    }
+  }
+
+  /** Side + variants last written to the table, so unchanged selections publish nothing. */
+  private String publishedSide = null;
+
+  private final String[] publishedVariants = new String[NUM_SECTIONS];
+
+  /**
+   * Publishes only the three selected trajectory names for a compact dashboard preview. Runs every
+   * loop, so it only builds and writes a display string when that selection actually changed —
+   * steady-state cost is a few string compares, no allocation.
+   */
   public void publishSelection() {
     String side = sideChooser.get();
+    boolean sideChanged = !Objects.equals(side, publishedSide);
     for (int i = 0; i < NUM_SECTIONS; i++) {
       String variant = sectionChoosers.get(i).get();
-      int section = i + 1;
+      if (!sideChanged && Objects.equals(variant, publishedVariants[i])) {
+        continue;
+      }
+      publishedVariants[i] = variant;
       String display =
           variant == null || NONE_OPTION.equals(variant)
               ? "None"
-              : resolveTrajName(side, section, variant);
-      SmartDashboard.putString("BlockAuto/Table/Path" + section, display);
+              : resolveTrajName(side, i + 1, variant);
+      SmartDashboard.putString(TABLE_KEYS[i], display);
     }
+    publishedSide = side;
   }
 
   /** Full trajectory base name for a side + section + chooser variant. */
@@ -177,6 +260,9 @@ public class BlockAutoBuilder {
 
     try {
       List<Command> steps = new ArrayList<>();
+      // The drum stays off at auto start: the first path's "Drum_stow" event marker cuts the
+      // intake and starts the drum ramping to StowVelocity partway through the path (see
+      // AutoCommands.firstPathWithIntake), and Shooting.end() leaves StowVelocity after every shot.
       if (pathNames[0] != null) {
         steps.add(AutoCommands.firstPathWithIntake(pathNames[0]));
       } else {
@@ -190,7 +276,7 @@ public class BlockAutoBuilder {
       // Sections 2/3: the intake starts the moment the shot ends and runs through the trench
       // pass and the path, so fuel in and around the trench is collected too.
       for (int section = 1; section < NUM_SECTIONS; section++) {
-        steps.add(AutoCommands.timedShoot());
+        steps.add(AutoCommands.timedShoot(section == 1 ? 3 : 2));
         if (pathNames[section] != null) {
           steps.add(AutoCommands.trenchThenPathWithIntake(pathNames[section]));
         } else {

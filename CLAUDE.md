@@ -34,9 +34,7 @@ Team-generic, game-agnostic code. **No `frc.robot` imports should leak in here.*
 
 - `frc.lib.io.MotorIO` — universal motor interface (voltage / velocity / position / torque-current control, Motion Magic constraints). Implementations: `MotorIOPhoenix6` (TalonFX, config-driven), `MotorIOSim` (WPILib physics sim). Inputs are logged in **radians**; the subsystem-facing API is in **rotations**.
 - `frc.lib.io.SensorIO` — boolean proximity sensor with debounce. Implementations: `SensorIOCANRange` (CTRE CANrange), `SensorIOSim`.
-- `frc.lib.io.vision.CameraIO` — vision interface with Limelight (`LimelightHelpers`-based) and PhotonVision implementations.
 - `frc.lib.bases.MotorSubsystem` — base class wrapping one `MotorIO`: periodic input logging, disconnected alert, rot-unit getters/setters, `isAtSetpoint()`. Most mechanism subsystems are thin subclasses of this.
-- `frc.lib.bases.CameraSubsystem` — same idea for cameras.
 - `frc.lib.simulation` — maple-sim glue (swerve drivetrain, fuel/game-piece simulation, arena).
 
 ### Subsystems — `frc.robot.subsystems`
@@ -53,7 +51,7 @@ Each subsystem folder pairs `X.java` with `XConstants.java` (CAN IDs, gains, sim
 | `Feeder`, `Indexer` | Move fuel from hopper to shooter |
 | `IntakeDeploy`, `IntakeRoller` | Deployable intake (position-controlled arm + roller) |
 | `FeedPath` | Sensor-only subsystem: two CANrange sensors (hopper + ball tunnel) reporting `HopperFilled()` / `IndexerFilled()` |
-| `vision/Cameras` | Vision pose estimates fed into drive odometry. Must initialize **after** `Drive.mInstance` is set — its periodic reads the drive pose. |
+| `vision/Vision` | Single Limelight MegaTag2 pose estimates fed into drive odometry (`LimelightHelpers`-based; constructor takes the Limelight name). Must initialize **after** `Drive.mInstance` is set — its periodic reads the drive pose. |
 
 ### Commands — `frc.robot.commands`
 

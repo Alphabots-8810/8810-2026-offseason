@@ -34,21 +34,25 @@ deploy {
                     jvmArgs.add("-XX:+UseSerialGC")
                     jvmArgs.add("-XX:MaxGCPauseMillis=50")
 
-                    // The options below may improve performance, but should only be enabled on the RIO 2
-                    //
-                    // final MAX_JAVA_HEAP_SIZE_MB = 100;
-                    // jvmArgs.add("-Xmx" + MAX_JAVA_HEAP_SIZE_MB + "M")
-                    // jvmArgs.add("-Xms" + MAX_JAVA_HEAP_SIZE_MB + "M")
-                    // jvmArgs.add("-XX:+AlwaysPreTouch")
+                    // RIO 2 only. Also our OOM defense (2026-07-13): free memory drains until the
+                    // kernel OOM-killer silently kills the JVM ("no robot code", nothing in
+                    // RioLog). A fixed pre-touched heap caps the JVM's share and turns any pure
+                    // Java leak into an OutOfMemoryError with a stack trace instead of a silent
+                    // kill.
+                    final MAX_JAVA_HEAP_SIZE_MB = 100;
+                    jvmArgs.add("-Xmx" + MAX_JAVA_HEAP_SIZE_MB + "M")
+                    jvmArgs.add("-Xms" + MAX_JAVA_HEAP_SIZE_MB + "M")
+                    jvmArgs.add("-XX:+AlwaysPreTouch")
                 }
 
                 // Static files artifact
                 frcStaticFileDeploy(getArtifactTypeClass('FileTreeArtifact')) {
                     files = project.fileTree('src/main/deploy')
                     directory = '/home/lvuser/deploy'
-                    // Change to true to delete files on roboRIO that no
-                    // longer exist in deploy directory on roboRIO
-                    deleteOldFiles = false
+                    // Delete files on the roboRIO that no longer exist locally — stale
+                    // .traj files otherwise linger forever and show up as phantom
+                    // variants on the BlockAuto choosers.
+                    deleteOldFiles = true
                 }
             }
         }
