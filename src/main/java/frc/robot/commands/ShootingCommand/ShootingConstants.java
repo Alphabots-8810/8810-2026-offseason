@@ -50,7 +50,7 @@ public final class ShootingConstants {
   // less; the config's stator limit is 100 A so a true stall does reach 90). NOTE: only the normal
   // velocity-closed-loop feed can trip this — energy-save mode drives the indexer at 50 A torque
   // current, which caps stator current below the threshold.
-  public static final double INDEXER_JAM_CURRENT_AMPS = 100.0;
+  public static final double INDEXER_JAM_CURRENT_AMPS = 90.0;
   public static final double INDEXER_JAM_DEBOUNCE_SEC = 0.2;
   // Unjam response: run the indexer backwards at this speed for this long, then resume the volley.
   public static final LoggedTunableNumber UNJAM_INDEXER_Current =

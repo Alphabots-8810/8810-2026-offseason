@@ -288,7 +288,7 @@ public class Shooting extends Command {
     aimDrive();
     IntakeRoller.mInstance.setV(0);
     Feeder.mInstance.setV(-ShootingConstants.UNJAM_Feeder_Current.getAsDouble());
-    Indexer.mInstance.setVelocityRotPerSec(ShootingConstants.UNJAM_INDEXER_Current.getAsDouble());
+    Indexer.mInstance.setVelocityRotPerSec(-ShootingConstants.UNJAM_INDEXER_Current.getAsDouble());
     IntakeDeploy.mInstance.setPositionCentimeter(55);
 
     if (unjamTimer.hasElapsed(ShootingConstants.UNJAM_DURATION_SEC.getAsDouble())) {
