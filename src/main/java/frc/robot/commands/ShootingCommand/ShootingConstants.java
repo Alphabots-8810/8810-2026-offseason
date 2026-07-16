@@ -139,11 +139,11 @@ public final class ShootingConstants {
   // Shared field-calibration knob applied to the drum speed at use time (not baked into the
   // table): balls landing SHORT -> raise, LONG -> lower. 1.0 = raw sim.
   public static final LoggedTunableNumber kSpeed =
-      new LoggedTunableNumber("Shooting/kSpeedNear", 1.065);
+      new LoggedTunableNumber("Shooting/kSpeedNear", 1.0);
 
   // Team 9997's field calibration is applied on top of the shared speed correction.
   public static final LoggedTunableNumber kSpeed9997CorrectionTunable =
-      new LoggedTunableNumber("Shooting/kSpeed9997Correction", 1.067);
+      new LoggedTunableNumber("Shooting/kSpeed9997Correction", 1.07);
 
   // Maple-sim projectile: launch speed (m/s) = drum target rot/s × this constant.
   public static final LoggedTunableNumber SimLaunchSpeedPerDrumRotps =
