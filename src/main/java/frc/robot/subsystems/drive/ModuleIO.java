@@ -7,6 +7,7 @@
 
 package frc.robot.subsystems.drive;
 
+import com.ctre.phoenix6.BaseStatusSignal;
 import edu.wpi.first.math.geometry.Rotation2d;
 import org.littletonrobotics.junction.AutoLog;
 
@@ -34,6 +35,11 @@ public interface ModuleIO {
 
   /** Updates the set of loggable inputs. */
   public default void updateInputs(ModuleIOInputs inputs) {}
+
+  /** Returns Phoenix status signals that the drive can refresh together in one JNI call. */
+  public default BaseStatusSignal[] getStatusSignals() {
+    return new BaseStatusSignal[0];
+  }
 
   /** Run the drive motor at the specified open loop value. */
   public default void setDriveOpenLoop(double output) {}

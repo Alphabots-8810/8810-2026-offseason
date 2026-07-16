@@ -7,6 +7,7 @@
 
 package frc.robot.subsystems.drive;
 
+import com.ctre.phoenix6.BaseStatusSignal;
 import com.ctre.phoenix6.configs.CANcoderConfiguration;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.swerve.SwerveModuleConstants;
@@ -69,6 +70,11 @@ public class Module {
     driveDisconnectedAlert.set(!inputs.driveConnected);
     turnDisconnectedAlert.set(!inputs.turnConnected);
     turnEncoderDisconnectedAlert.set(!inputs.turnEncoderConnected);
+  }
+
+  /** Returns the hardware signals for the drive-wide bulk refresh. */
+  public BaseStatusSignal[] getStatusSignals() {
+    return io.getStatusSignals();
   }
 
   /** Runs the module with the specified setpoint state. Mutates the state to optimize it. */

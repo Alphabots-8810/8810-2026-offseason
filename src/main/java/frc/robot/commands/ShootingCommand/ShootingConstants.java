@@ -32,7 +32,7 @@ public final class ShootingConstants {
   // Inside this heading error the omega command is zeroed. Errors this small produce omega
   // commands below what the swerve can execute; static friction turns them into a ~5 Hz
   // limit-cycle wiggle. 1 deg of heading is ~9 cm lateral at 5 m, well inside the HUB.
-  public static final double AIM_ERROR_DEADBAND_RAD = Units.degreesToRadians(1.5);
+  public static final double AIM_ERROR_DEADBAND_RAD = Units.degreesToRadians(2);
 
   // Aim heading controller (profiled). Gains carry over from the pre-profile aim controller
   // (verified: no overshoot, well damped); the trapezoid constraints are inherited from the
@@ -50,7 +50,7 @@ public final class ShootingConstants {
   // less; the config's stator limit is 100 A so a true stall does reach 90). NOTE: only the normal
   // velocity-closed-loop feed can trip this — energy-save mode drives the indexer at 50 A torque
   // current, which caps stator current below the threshold.
-  public static final double INDEXER_JAM_CURRENT_AMPS = 90.0;
+  public static final double INDEXER_JAM_CURRENT_AMPS = 100.0;
   public static final double INDEXER_JAM_DEBOUNCE_SEC = 0.2;
   // Unjam response: run the indexer backwards at this speed for this long, then resume the volley.
   public static final LoggedTunableNumber UNJAM_INDEXER_Current =

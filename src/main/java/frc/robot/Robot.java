@@ -28,6 +28,7 @@ import org.littletonrobotics.junction.wpilog.WPILOGWriter;
 public class Robot extends LoggedRobot {
   private Command autonomousCommand;
   private RobotContainer robotContainer;
+  private int dashboardPublishCounter = 0;
 
   public Robot() {
     // Record metadata
@@ -91,11 +92,15 @@ public class Robot extends LoggedRobot {
     // the Command-based framework to work.
     CommandScheduler.getInstance().run();
 
-    // Live dashboard preview of the block-auto selection.
-    robotContainer.updateDashboardOutputs();
+    // Dashboard data only needs human-display frequency. The RIO trace showed NetworkTables
+    // serialization taking 20-40 ms, so publish these values at 10 Hz instead of every loop.
+    if (++dashboardPublishCounter >= 5) {
+      dashboardPublishCounter = 0;
+      robotContainer.updateDashboardOutputs();
+      ShiftUtil.publishShiftInfo();
+    }
 
-    // SHIFT tracking: dashboard outputs + AdvantageKit log for replay review.
-    ShiftUtil.publishShiftInfo();
+    // SHIFT tracking remains in the 50 Hz AdvantageKit log for replay review.
     ShiftUtil.ShiftInfo shiftInfo = ShiftUtil.getOfficialShiftInfo();
     Logger.recordOutput("Shift/CurrentShift", shiftInfo.currentShift());
     Logger.recordOutput("Shift/Active", shiftInfo.active());

@@ -9,6 +9,7 @@ package frc.robot.subsystems.drive;
 
 import static edu.wpi.first.units.Units.*;
 
+import com.ctre.phoenix6.BaseStatusSignal;
 import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.config.ModuleConfig;
 import com.pathplanner.lib.config.PIDConstants;
@@ -49,6 +50,8 @@ import frc.robot.commands.FerryCommand.FerryConstants;
 import frc.robot.generated.TunerConstants;
 import frc.robot.simulation.MapleSimArena;
 import frc.robot.util.LocalADStarAK;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import org.littletonrobotics.junction.AutoLogOutput;
@@ -90,6 +93,7 @@ public class Drive extends SubsystemBase {
   private final GyroIO gyroIO;
   private final GyroIOInputsAutoLogged gyroInputs = new GyroIOInputsAutoLogged();
   private final Module[] modules = new Module[4]; // FL, FR, BL, BR
+  private final BaseStatusSignal[] statusSignals;
   private final SysIdRoutine sysId;
   private final Alert gyroDisconnectedAlert =
       new Alert("Disconnected gyro, using kinematics as fallback.", AlertType.kError);
@@ -109,6 +113,7 @@ public class Drive extends SubsystemBase {
   // Field2d sendable so dashboards (Elastic) can show the robot pose on a field widget;
   // AdvantageKit's Odometry/Robot output is a struct that Elastic's field widget can't read.
   private final Field2d dashboardField = new Field2d();
+  private int dashboardPublishCounter = 0;
 
   public Drive(
       GyroIO gyroIO,
@@ -121,6 +126,13 @@ public class Drive extends SubsystemBase {
     modules[1] = new Module(frModuleIO, 1, TunerConstants.FrontRight);
     modules[2] = new Module(blModuleIO, 2, TunerConstants.BackLeft);
     modules[3] = new Module(brModuleIO, 3, TunerConstants.BackRight);
+
+    var statusSignalList = new ArrayList<BaseStatusSignal>();
+    Collections.addAll(statusSignalList, gyroIO.getStatusSignals());
+    for (var module : modules) {
+      Collections.addAll(statusSignalList, module.getStatusSignals());
+    }
+    statusSignals = statusSignalList.toArray(BaseStatusSignal[]::new);
 
     // Usage reporting for swerve template
     HAL.report(tResourceType.kResourceType_RobotDrive, tInstances.kRobotDriveSwerve_AdvantageKit);
@@ -169,12 +181,20 @@ public class Drive extends SubsystemBase {
   @Override
   public void periodic() {
     odometryLock.lock(); // Prevents odometry updates while reading data
-    gyroIO.updateInputs(gyroInputs);
-    Logger.processInputs("Drive/Gyro", gyroInputs);
-    for (var module : modules) {
-      module.periodic();
+    try {
+      // Phoenix documents a single bulk refresh as faster than refreshing signals separately.
+      // Suppress DS error spam here; the per-device connection alerts below report failures.
+      if (statusSignals.length > 0) {
+        BaseStatusSignal.refreshAll(false, statusSignals);
+      }
+      gyroIO.updateInputs(gyroInputs);
+      Logger.processInputs("Drive/Gyro", gyroInputs);
+      for (var module : modules) {
+        module.periodic();
+      }
+    } finally {
+      odometryLock.unlock();
     }
-    odometryLock.unlock();
 
     // Stop moving when disabled
     if (DriverStation.isDisabled()) {
@@ -203,7 +223,12 @@ public class Drive extends SubsystemBase {
 
     Logger.recordOutput("Odometry/DistanceToFerryTarget", calculateFerryTargetDistance());
 
-    dashboardField.setRobotPose(getPose());
+    // Field2d/NetworkTables serialization showed 20-40 ms spikes in the RIO trace. A 10 Hz field
+    // display is visually smooth while leaving the 50 Hz control and AdvantageKit data untouched.
+    if (++dashboardPublishCounter >= 5) {
+      dashboardPublishCounter = 0;
+      dashboardField.setRobotPose(getPose());
+    }
   }
 
   private double calculateFerryTargetDistance() {

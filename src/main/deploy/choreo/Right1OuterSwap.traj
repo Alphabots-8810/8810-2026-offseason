@@ -68,7 +68,7 @@
    "radius":0.0508,
    "vmax":544.5427266222308,
    "tmax":0.8,
-   "cof":1.5,
+   "cof":2.0,
    "bumper":{
     "front":0.4279,
     "side":0.4279,
@@ -254,5 +254,6 @@
   "splits":[0]
  },
  "events":[
-   {"name":"IntakeZeroOut", "from":{"target":0, "targetTimestamp":0.0, "offset":{"exp":"0 s", "val":0.0}}, "event":null}]
+   {"name":"IntakeZeroOut", "from":{"target":0, "targetTimestamp":0.0, "offset":{"exp":"0 s", "val":0.0}}, "event":null},
+   {"name":"Drum_stow", "from":{"target":5, "targetTimestamp":3.69635, "offset":{"exp":"0 s", "val":0.0}}, "event":null}]
 }
