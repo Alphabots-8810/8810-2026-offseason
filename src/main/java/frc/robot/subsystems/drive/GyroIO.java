@@ -7,6 +7,7 @@
 
 package frc.robot.subsystems.drive;
 
+import com.ctre.phoenix6.BaseStatusSignal;
 import edu.wpi.first.math.geometry.Rotation2d;
 import org.littletonrobotics.junction.AutoLog;
 
@@ -21,4 +22,9 @@ public interface GyroIO {
   }
 
   public default void updateInputs(GyroIOInputs inputs) {}
+
+  /** Returns Phoenix status signals that the drive can refresh together in one JNI call. */
+  public default BaseStatusSignal[] getStatusSignals() {
+    return new BaseStatusSignal[0];
+  }
 }

@@ -43,6 +43,7 @@ public class Vision extends SubsystemBase {
     this.name = name;
     this.disconnectedAlert =
         new Alert("Disconnected vision camera \"" + name + "\".", AlertType.kWarning);
+    LimelightHelpers.SetIMUMode(name, 1);
 
     // No camera hardware or vision simulation outside the real robot.
     if (Constants.currentMode != Constants.Mode.REAL) {
