@@ -138,7 +138,7 @@ public final class AutoCommands {
       return new IntakeCommand();
     }
     return Commands.sequence(
-        new IntakeCommand(60, 400, false).withTimeout(stowTime.get()),
+        new IntakeCommand(100, 500, false).withTimeout(stowTime.get()),
         Commands.runOnce(
             () -> {
               Drum.mInstance.setCurrent(10);

@@ -84,10 +84,10 @@ public class TunerConstants {
       new Pigeon2Configuration()
           .withMountPose(
               new MountPoseConfigs()
-                  .withMountPoseYaw(-179.5045928955078)
-                  .withMountPosePitch(-0.3525221049785614)
-                  .withMountPoseRoll(-0.7321973443031311))
-          .withGyroTrim(new GyroTrimConfigs().withGyroScalarZ(-5.433));
+                  .withMountPoseYaw(-179.50405883789062)
+                  .withMountPosePitch(0.8741433024406433)
+                  .withMountPoseRoll(-1.2947940826416016))
+          .withGyroTrim(new GyroTrimConfigs().withGyroScalarZ(-7.1));
 
   // CAN bus that the devices are located on;
   // All swerve devices must share the same CAN bus
@@ -102,7 +102,7 @@ public class TunerConstants {
   // This may need to be tuned to your individual robot
   private static final double kCoupleRatio = 4.5;
 
-  private static final double kDriveGearRatio = 7.03125;
+  private static final double kDriveGearRatio = 6.026785714285714;
   private static final double kSteerGearRatio = 26.09090909090909;
   private static final Distance kWheelRadius = Inches.of(2);
 

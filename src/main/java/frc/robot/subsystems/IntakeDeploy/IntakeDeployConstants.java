@@ -34,7 +34,7 @@ public final class IntakeDeployConstants {
           .withNeutralMode(NeutralMode.BRAKE)
           .withCurrentLimits(30.0, 60.0)
           .withDynamicMotionMagic(DEFAULT_CRUISE_VELOCITY, DEFAULT_ACCELERATION, DEFAULT_JERK)
-          .withSlot0(20, 0.0, 3, 0.0, 0.0, 0.0, 0.0)
+          .withSlot0(20, 0.0, 6, 0.0, 0.0, 0.0, 0.0)
           .withClosedLoopOutput(ClosedLoopOutput.TORQUE_CURRENT_FOC);
 
   public static final MotorIOSimConfig IntakeDeploy_SIM_CONFIG =
