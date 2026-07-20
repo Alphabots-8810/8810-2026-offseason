@@ -8,7 +8,7 @@ public final class AutoCommandsConstants {
   public static final double INWARD_ZERO_TIMEOUT_SEC = 1.0;
 
   // How long each timed Shooting burst runs in the auto sequence.
-  public static final double SHOOTING_DURATION_SEC = 2.5;
+  public static final double SHOOTING_DURATION_SEC = 3.0;
 
   // Commented out 2026-07-11: these Choreo trajectories were removed from deploy/choreo when the
   // Swap-trajectory BlockAutoBuilder scheme replaced the hand-built three-piece auto (commits

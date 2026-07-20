@@ -202,8 +202,12 @@ public class Shooting extends Command {
 
   /** The drum setpoint for a distance: sim-derived table times the distance-dependent kSpeed. */
   private double drumSetpointRotps(double distance) {
-    return ShootingConstants.distanceToShooterRotps.get(distance)
-        * ShootingConstants.kSpeed.getAsDouble();
+    return !isEnergySave
+        ? (ShootingConstants.distanceToShooterRotps.get(distance)
+            * ShootingConstants.kSpeed.getAsDouble())
+        : (ShootingConstants.distanceToShooterRotps.get(distance)
+            * ShootingConstants.kSpeed.getAsDouble()
+            * 1.008);
   }
 
   /** Drive the flywheel and hood to the interpolated sektpoints for the current distance. */

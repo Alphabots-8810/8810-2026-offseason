@@ -147,7 +147,7 @@ public final class ShootingConstants {
   public static final double K_NEAR_DISTANCE_M = 2.0;
   public static final double K_FAR_DISTANCE_M = 3.0;
   public static final LoggedTunableNumber kSpeed =
-      new LoggedTunableNumber("Shooting/kSpeedNear", 1.065);
+      new LoggedTunableNumber("Shooting/kSpeedNear", 1.075);
 
   // Maple-sim projectile: launch speed (m/s) = drum target rot/s × this constant.
   public static final LoggedTunableNumber SimLaunchSpeedPerDrumRotps =

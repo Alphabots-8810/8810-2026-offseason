@@ -43,8 +43,8 @@ public class ShiftUtil {
   private static Timer shiftTimer = new Timer();
   private static final ShiftEnum[] shiftsEnums = ShiftEnum.values();
 
-  private static final double[] shiftStartTimes = {0.0, 10.0, 35.0, 60.0, 85.0, 110.0};
-  private static final double[] shiftEndTimes = {10.0, 35.0, 60.0, 85.0, 110.0, 140.0};
+  private static final double[] shiftStartTimes = {0.0, 11.0, 36.0, 61.0, 86.0, 111.0};
+  private static final double[] shiftEndTimes = {11.0, 36.0, 61.0, 86.0, 111.0, 141.0};
 
   public static final double autoEndTime = 20.0;
   public static final double teleopDuration = 140.0;

@@ -7,10 +7,10 @@ import edu.wpi.first.units.Units;
 public class FerryConstants {
   // Depot-Side Alliance Corner
   public static final Translation2d kBlueLeftFerry =
-      new Translation2d(Units.Meters.of(1.5), Units.Feet.of(18.5));
+      new Translation2d(Units.Meters.of(1.5), Units.Feet.of(20.5));
   // Outpost-Side Alliance Corner
   public static final Translation2d kBlueRightFerry =
-      new Translation2d(Units.Meters.of(1.5), Units.Feet.of(6.0));
+      new Translation2d(Units.Meters.of(1.5), Units.Feet.of(4.0));
   // Depot-Side Alliance Trench
   public static final Translation2d kBlueLeftNeutralFerry =
       new Translation2d(Units.Meters.of(1.5), Units.Feet.of(18.0));
