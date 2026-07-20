@@ -301,23 +301,17 @@ public class MotorIOPhoenix6 implements MotorIO {
     inputs.positionRad = Units.rotationsToRadians(position.getValueAsDouble());
     inputs.velocityRadPerSec = Units.rotationsToRadians(velocity.getValueAsDouble());
     inputs.appliedVolts = appliedVolts.getValueAsDouble();
-    inputs.supplyCurrentAmps = supplyCurrent.getValueAsDouble();
-    inputs.statorCurrentAmps = statorCurrent.getValueAsDouble();
     // Reuse the arrays across cycles (same inputs object every loop) to avoid per-loop garbage
-    if (inputs.perMotorSupplyCurrentAmps.length != 1 + followers.size()) {
-      inputs.perMotorSupplyCurrentAmps = new double[1 + followers.size()];
-      inputs.perMotorStatorCurrentAmps = new double[1 + followers.size()];
+    if (inputs.supplyCurrentAmps.length != 1 + followers.size()) {
+      inputs.supplyCurrentAmps = new double[1 + followers.size()];
+      inputs.statorCurrentAmps = new double[1 + followers.size()];
     }
-    inputs.perMotorSupplyCurrentAmps[0] = inputs.supplyCurrentAmps;
-    inputs.perMotorStatorCurrentAmps[0] = inputs.statorCurrentAmps;
-    double totalSupply = inputs.supplyCurrentAmps;
+    inputs.supplyCurrentAmps[0] = supplyCurrent.getValueAsDouble();
+    inputs.statorCurrentAmps[0] = statorCurrent.getValueAsDouble();
     for (int i = 0; i < followers.size(); i++) {
-      double followerSupply = followerSupplyCurrents.get(i).getValueAsDouble();
-      inputs.perMotorSupplyCurrentAmps[1 + i] = followerSupply;
-      inputs.perMotorStatorCurrentAmps[1 + i] = followerStatorCurrents.get(i).getValueAsDouble();
-      totalSupply += followerSupply;
+      inputs.supplyCurrentAmps[1 + i] = followerSupplyCurrents.get(i).getValueAsDouble();
+      inputs.statorCurrentAmps[1 + i] = followerStatorCurrents.get(i).getValueAsDouble();
     }
-    inputs.totalSupplyCurrentAmps = totalSupply;
     inputs.tempCelsius = tempCelsius.getValueAsDouble();
     inputs.controlMode = controlMode;
     inputs.voltageSetpoint = voltageSetpoint;

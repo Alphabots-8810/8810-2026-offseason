@@ -3,7 +3,6 @@ package frc.robot;
 import com.pathplanner.lib.auto.AutoBuilder;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.GenericHID;
@@ -15,7 +14,6 @@ import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.commands.AutoCommands.AutoCommands;
 import frc.robot.commands.AutoCommands.BlockAutoBuilder;
-import frc.robot.commands.AutoTrenchCommand.AutoTrenchCommand;
 import frc.robot.commands.AutoalignIntakeCommand.AutoalignIntake;
 import frc.robot.commands.DriveCommands.DriveCommands;
 import frc.robot.commands.FerryCommand.Ferry;
@@ -24,6 +22,7 @@ import frc.robot.commands.IntakeCommand.IntakeCommand;
 import frc.robot.commands.IntakeDeployZeroCommand.IntakeDeployZeroCommand;
 import frc.robot.commands.ManualCommand.Manual;
 import frc.robot.commands.ShootingCommand.Shooting;
+import frc.robot.commands.ShootingCommand.ShootingConstants;
 import frc.robot.generated.TunerConstants;
 import frc.robot.simulation.FuelSimulation;
 import frc.robot.simulation.MapleSimArena;
@@ -53,6 +52,8 @@ import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
  * subsystems, commands, and button mappings) should be declared here.
  */
 public class RobotContainer {
+  private static final double K_SPEED_TUNE_STEP = 0.01;
+
   // Subsystems
   private final Drive drive;
 
@@ -200,16 +201,23 @@ public class RobotContainer {
             () -> -controller.getLeftY(),
             () -> -controller.getLeftX(),
             () -> -controller.getRightX()));
-    controller.povUp().whileTrue(new AutoTrenchCommand(() -> controller.getLeftY()));
     controller
         .povLeft()
         .onTrue(new IntakeDeployZeroCommand(IntakeDeployZeroCommand.Direction.INWARD));
     controller
-        .povDown()
-        .whileTrue(Commands.run(() -> drive.runVelocity(new ChassisSpeeds(-2, 0, 0)), drive));
+        .povUp()
+        .onTrue(
+            Commands.runOnce(
+                () ->
+                    ShootingConstants.kSpeed.set(
+                        ShootingConstants.kSpeed.get() + K_SPEED_TUNE_STEP)));
     controller
-        .povRight()
-        .whileTrue(Commands.run(() -> drive.runVelocity(new ChassisSpeeds(0, -2, 0)), drive));
+        .povDown()
+        .onTrue(
+            Commands.runOnce(
+                () ->
+                    ShootingConstants.kSpeed.set(
+                        ShootingConstants.kSpeed.get() - K_SPEED_TUNE_STEP)));
 
     controller
         .b()

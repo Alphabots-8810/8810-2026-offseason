@@ -74,6 +74,13 @@ public class LoggedTunableNumber implements DoubleSupplier {
     }
   }
 
+  /** Updates the value published to the dashboard. */
+  public void set(double value) {
+    if (hasDefault) {
+      dashboardNumber.set(value);
+    }
+  }
+
   /**
    * Checks whether the number has changed since our last check
    *
