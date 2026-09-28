@@ -4,7 +4,7 @@ import frc.robot.util.LoggedTunableNumber;
 
 public final class ManualConstants {
   public static final LoggedTunableNumber ShooterRotpsTunable =
-      new LoggedTunableNumber("Manual/ShooterRotps", 46);
+      new LoggedTunableNumber("Manual/ShooterRotps", 50);
   public static final LoggedTunableNumber HoodDegTunable =
       new LoggedTunableNumber("Manual/HoodDegree", 0);
   public static final LoggedTunableNumber IndexerRotpsTunable =

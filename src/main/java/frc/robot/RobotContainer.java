@@ -14,7 +14,6 @@ import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.commands.AutoCommands.AutoCommands;
 import frc.robot.commands.AutoCommands.BlockAutoBuilder;
-import frc.robot.commands.AutoalignIntakeCommand.AutoalignIntake;
 import frc.robot.commands.DriveCommands.DriveCommands;
 import frc.robot.commands.FerryCommand.Ferry;
 import frc.robot.commands.HoodZeroCommand.HoodZeroCommand;
@@ -71,7 +70,7 @@ public class RobotContainer {
 
   // Created after the drive in the constructor because its camera reads the drive pose
   private Vision vision = Vision.mInstance;
-  private Vision vision2 = Vision.mInstance2;
+  //   private Vision vision2 = Vision.mInstance2;
 
   // Controller
   private final CommandXboxController controller = new CommandXboxController(1);
@@ -147,7 +146,7 @@ public class RobotContainer {
     // Initialize the vision subsystem after Drive.mInstance is set, since its
     // periodic reads the drive pose
     vision = Vision.mInstance;
-    vision2 = Vision.mInstance2;
+    // vision2 = Vision.mInstance2;
 
     // No EventTrigger bindings for Choreo event markers: EventTrigger commands are scheduled on
     // the main scheduler, so their subsystem requirements conflict with the deferred block auto
@@ -267,7 +266,6 @@ public class RobotContainer {
                 () -> {
                   Indexer.mInstance.setV(-3);
                   Feeder.mInstance.setV(-3);
-                  IntakeRoller.mInstance.setV(-3);
                 }));
     controller
         .rightTrigger()
@@ -276,7 +274,6 @@ public class RobotContainer {
                 () -> {
                   Indexer.mInstance.setV(0);
                   Feeder.mInstance.setV(0);
-                  IntakeRoller.mInstance.setV(0);
                 }));
 
     controller
@@ -288,11 +285,22 @@ public class RobotContainer {
     controller.leftTrigger(0.1).whileTrue(new IntakeCommand());
     controller
         .leftBumper()
-        .whileTrue(
-            new AutoalignIntake(
-                () -> -controller.getLeftY(),
-                () -> -controller.getLeftX(),
-                () -> -controller.getRightX()));
+        .onTrue(
+            new InstantCommand(
+                () -> {
+                  Indexer.mInstance.setV(-3);
+                  Feeder.mInstance.setV(-3);
+                  IntakeRoller.mInstance.setV(-3);
+                }));
+    controller
+        .leftBumper()
+        .onFalse(
+            new InstantCommand(
+                () -> {
+                  Indexer.mInstance.setV(0);
+                  Feeder.mInstance.setV(0);
+                  IntakeRoller.mInstance.setV(0);
+                }));
     controller
         .a()
         .whileTrue(new Shooting(true, () -> -controller.getLeftY(), () -> -controller.getLeftX()));

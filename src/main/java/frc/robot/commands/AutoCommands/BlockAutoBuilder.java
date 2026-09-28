@@ -276,7 +276,7 @@ public class BlockAutoBuilder {
       // Sections 2/3: the intake starts the moment the shot ends and runs through the trench
       // pass and the path, so fuel in and around the trench is collected too.
       for (int section = 1; section < NUM_SECTIONS; section++) {
-        steps.add(AutoCommands.timedShoot(section == 1 ? 3 : 2));
+        steps.add(AutoCommands.timedShoot(section == 1 ? 3 : 3.5));
         if (pathNames[section] != null) {
           steps.add(AutoCommands.trenchThenPathWithIntake(pathNames[section]));
         } else {

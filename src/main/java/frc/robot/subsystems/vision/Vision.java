@@ -21,7 +21,7 @@ import org.littletonrobotics.junction.Logger;
 public class Vision extends SubsystemBase {
 
   public static final Vision mInstance = new Vision("limelight");
-  public static final Vision mInstance2 = new Vision("limelight-l");
+  // public static final Vision mInstance2 = new Vision("limelight-l");
 
   // Reject vision while moving faster than these thresholds; MegaTag2 degrades under speed.
   private static final double MAX_LINEAR_SPEED_MPS = 2.0;
@@ -124,10 +124,10 @@ public class Vision extends SubsystemBase {
 
   private static InterpolatingDoubleTreeMap taToXYStdDevMeters() {
     InterpolatingDoubleTreeMap map = new InterpolatingDoubleTreeMap();
-    map.put(0.0, 4.00); // Barely visible, almost no trust
-    map.put(0.5, 0.50);
-    map.put(1.0, 0.30);
-    map.put(3.0, 0.10); // Close tag, high trust
+    map.put(0.01, 1.00); // Barely visible, almost no trust
+    map.put(0.046, 0.40);
+    map.put(0.071, 0.35);
+    map.put(0.17, 0.08); // Close tag, high trust
     return map;
   }
 }
